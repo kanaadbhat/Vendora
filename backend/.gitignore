@@ -1,31 +1,52 @@
 # Node.js dependencies
 node_modules/
+npm-debug.log*
+yarn.lock
 package-lock.json
 
-# Firebase credentials & configurations
-firebase.json
-firestore.indexes.json
-firestore.rules
+# Environment variables
 .env
 .env.local
-.env.*.local
+.env.development
+.env.test
+.env.production
 
-# Logs & Debug files
+# Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 debug.log
 
-# Firebase Emulator & Firestore local data
-/.firebase
-/firebase-debug.log
-/firebase-error.log
-/firestore_export/
-.storage/
-
-# VSCode settings (if using VSCode)
-.vscode/
+# Binaries & Build Artifacts
+dist/
+build/
+*.tsbuildinfo
 
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database files (if applicable)
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+dump.rdb
+
+# Docker files
+docker-compose.override.yml
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Misc
+*.bak
+*.cache

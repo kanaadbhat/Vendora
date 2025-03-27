@@ -1,16 +1,23 @@
-import express from "express";
-import dotenv from "dotenv";
-import admin from "firebase-admin";
-import routes from "./routes/index.js"; // Import all routes
+import express from 'express'; 
+import cors from 'cors';
+import dotenv from 'dotenv';
+import {connectDB} from './utils/connectDB.js';
+import cookieParser from 'cookie-parser';
+dotenv.config();
 
-
-// Express App Setup
 const app = express();
+app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
-// Use the routes
-app.use("/api", routes);
+import userRouter from './routes/user.routes.js';
+import vendorProductRouter from './routes/vendorProduct.routes.js';
+import userProductRouter from './routes/userProduct.routes.js';
+app.use('/api/user' , userRouter);
+app.use('/api/vendorProduct',vendorProductRouter);
+app.use('/api/userProduct',userProductRouter);
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(process.env.PORT , () => {
+    connectDB();
+    console.log(`Server running on port ${process.env.PORT}`);
+})
