@@ -1,7 +1,8 @@
-
 import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { validateEmail, validatePhone } from "../utils/validators.js";
 
 //SIGNIN
 const login = asyncHandler(async (req, res) => {
@@ -14,26 +15,54 @@ const login = asyncHandler(async (req, res) => {
     });
   }
 
-  const user =await User.findOne({ email });
+  if (!validateEmail(email)) {
+    return res.status(400).send({
+      message: "Please provide a valid email address",
+      success: false,
+    });
+  }
 
-  if (!user || user.password !== password) {
+  const user = await User.findOne({ email });
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(400).send({
       message: "Incorrect email or password",
       success: false,
     });
   }
 
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
+  const accessToken = jwt.sign(
+    { 
+      id: user._id,
+      role: user.role 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
 
-  res.cookie("token", token, {
-    httpOnly: true,
-    sameSite: "Strict",
-  });
+  const refreshToken = jwt.sign(
+    { 
+      id: user._id,
+      role: user.role 
+    },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
 
   return res.status(200).send({
     message: "Login successful",
     success: true,
-    user,
+    accessToken,
+    refreshToken,
+    user: {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      businessName: user.businessName,
+      businessDescription: user.businessDescription,
+    },
   });
 });
 
@@ -48,7 +77,28 @@ const register = asyncHandler(async (req, res) => {
     businessName,
     businessDescription,
   } = req.body;
-  console.log(req.body);
+
+  // Validate inputs
+  if (!validateEmail(email)) {
+    return res.status(400).send({
+      message: "Please provide a valid email address",
+      success: false,
+    });
+  }
+
+  if (!validatePhone(phone)) {
+    return res.status(400).send({
+      message: "Please provide a valid phone number",
+      success: false,
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).send({
+      message: "Password must be at least 6 characters long",
+      success: false,
+    });
+  }
 
   const check = await User.findOne({ email });
   if (check) {
@@ -58,6 +108,7 @@ const register = asyncHandler(async (req, res) => {
     });
   }
 
+  let user;
   if (role === "customer") {
     if (!email || !password || !name || !phone) {
       return res.status(400).send({
@@ -65,17 +116,12 @@ const register = asyncHandler(async (req, res) => {
         success: false,
       });
     }
-    const user = await User.create({
+    user = await User.create({
       email,
-      password,
+      password: await bcrypt.hash(password, 10),
       name,
       phone,
       role,
-    });
-    await user.save();
-    return res.status(201).send({
-      message: "Customer registered successfully",
-      success: true,
     });
   } else {
     if (
@@ -91,19 +137,91 @@ const register = asyncHandler(async (req, res) => {
         success: false,
       });
     }
-    const user = await User.create({
+    user = await User.create({
       email,
-      password,
+      password: await bcrypt.hash(password, 10),
       name,
       phone,
       role,
       businessName,
       businessDescription,
     });
-    await user.save();
-    return res.status(201).send({
-      message: "Vendor registered successfully",
+  }
+
+  const accessToken = jwt.sign(
+    { 
+      id: user._id,
+      role: user.role 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+
+  const refreshToken = jwt.sign(
+    { 
+      id: user._id,
+      role: user.role 
+    },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  return res.status(201).send({
+    message: "Registration successful",
+    success: true,
+    accessToken,
+    refreshToken,
+    user: {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      businessName: user.businessName,
+      businessDescription: user.businessDescription,
+    },
+  });
+});
+
+//REFRESH TOKEN
+const refreshToken = asyncHandler(async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({
+      message: "Refresh token is required",
+      success: false,
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(401).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    const accessToken = jwt.sign(
+      { 
+        id: user._id,
+        role: user.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    return res.status(200).json({
       success: true,
+      accessToken,
+    });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid refresh token",
+      success: false,
     });
   }
 });
@@ -119,7 +237,11 @@ const exploreUsers = asyncHandler(async (req, res) => {
 
 //SIGNOUT
 const signOut = asyncHandler(async (req, res) => {
-  res.cookie("jwt", "", {
+  res.cookie("token", "", {
+    httpOnly: true,
+    expires: new Date(0),
+  });
+  res.cookie("refreshToken", "", {
     httpOnly: true,
     expires: new Date(0),
   });
@@ -147,4 +269,31 @@ const deleteProfile = asyncHandler(async (req, res) => {
     .json({ message: "Profile deleted successfully", success: true });
 });
 
-export { login, register, exploreUsers, signOut, deleteProfile };
+//GET USER DETAILS
+const fetchUserRole = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const user = await User.findById(userId).select("-password");
+
+  if (!user) {
+    return res.status(404).json({ 
+      message: "User not found", 
+      success: false 
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+export { 
+  login, 
+  register, 
+  exploreUsers, 
+  signOut, 
+  deleteProfile,
+  fetchUserRole,
+  refreshToken 
+};

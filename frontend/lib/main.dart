@@ -1,31 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert'; 
-import 'package:frontend/screens/auth.dart';
-
-
-final theme = ThemeData(
-  useMaterial3: true,
-  // colorScheme: ColorScheme.fromSeed(
-  //   brightness: Brightness.dark,
-  //   seedColor: const Color.fromARGB(255, 131, 57, 0),
-  // ),
-  //textTheme: GoogleFonts.latoTextTheme(),
-);
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'views/auth/auth_screen.dart';
+import 'views/customer/home_screen.dart';
+import 'views/vendor/home_screen.dart';
+import 'viewmodels/role_viewmodel.dart';
+import 'widgets/error_widget.dart';
+import 'widgets/loading_widget.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roleState = ref.watch(roleProvider);
+
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Vendora',
-      theme:theme,
-      home: const AuthScreen(),
+      home: roleState.when(
+        data: (role) {
+          if (role == "customer") {
+            return const CustomerHomeScreen();
+          } else if (role == "vendor") {
+            return const VendorHomeScreen();
+          } else {
+            return const AuthScreen();
+          }
+        },
+        loading: () => const LoadingWidget(message: 'Loading...'),
+        error:
+            (error, _) => CustomErrorWidget(
+              message: error.toString(),
+              onRetry: () => ref.read(roleProvider.notifier).fetchUserRole(),
+            ),
+      ),
     );
   }
 }
