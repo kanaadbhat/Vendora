@@ -6,7 +6,7 @@ const productSchema = mongoose.Schema({
         required: true,
     },
     price: {
-        type: Number,
+        type: String,
         required: true,
     },
     description: {
@@ -19,7 +19,7 @@ const productSchema = mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Vendor",
+        ref: "User",
         required: true,
     },
 });

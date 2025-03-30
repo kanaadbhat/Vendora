@@ -122,9 +122,9 @@ class ApiService {
     }
   }
 
-  Future<Response> delete(String endpoint) async {
+  Future<Response> delete(String endpoint, {dynamic data}) async {
     try {
-      return await _dio.delete(endpoint);
+      return await _dio.delete(endpoint, data: data);
     } on DioException catch (e) {
       return _handleError(e);
     }

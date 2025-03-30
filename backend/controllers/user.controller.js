@@ -228,6 +228,14 @@ const refreshToken = asyncHandler(async (req, res) => {
 
 //LIST ALL REGISTERED VENDORS
 const exploreUsers = asyncHandler(async (req, res) => {
+  // Additional check to ensure only customers can explore vendors
+  if (req.user.role !== "customer") {
+    return res.status(403).json({
+      message: "Only customers can explore vendors",
+      success: false,
+    });
+  }
+
   const vendors = await User.find({role:"vendor"}).select("-password");
   res.status(200).json({
     success: true,
@@ -255,22 +263,35 @@ const signOut = asyncHandler(async (req, res) => {
 const deleteProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  const user =
-    await User.findById(userId);
+  const user = await User.findById(userId);
 
   if (!user) {
-    return res.status(404).json({ message: "User not found", success: false });
+    return res.status(404).json({ 
+      message: "User not found", 
+      success: false 
+    });
+  }
+
+  // Additional check to ensure users can only delete their own profile
+  if (user._id.toString() !== userId.toString()) {
+    return res.status(403).json({ 
+      message: "You can only delete your own profile", 
+      success: false 
+    });
   }
 
   await user.deleteOne();
 
   return res
     .status(200)
-    .json({ message: "Profile deleted successfully", success: true });
+    .json({ 
+      message: "Profile deleted successfully", 
+      success: true 
+    });
 });
 
 //GET USER DETAILS
-const fetchUserRole = asyncHandler(async (req, res) => {
+const userDetails = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   const user = await User.findById(userId).select("-password");
@@ -278,6 +299,14 @@ const fetchUserRole = asyncHandler(async (req, res) => {
   if (!user) {
     return res.status(404).json({ 
       message: "User not found", 
+      success: false 
+    });
+  }
+
+  // Additional check to ensure users can only access their own details
+  if (user._id.toString() !== userId.toString()) {
+    return res.status(403).json({ 
+      message: "You can only access your own details", 
       success: false 
     });
   }
@@ -294,6 +323,6 @@ export {
   exploreUsers, 
   signOut, 
   deleteProfile,
-  fetchUserRole,
+  userDetails,
   refreshToken 
 };

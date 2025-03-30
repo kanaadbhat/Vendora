@@ -11,50 +11,52 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _form = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _businessNameController = TextEditingController();
   final _businessDescriptionController = TextEditingController();
-  String _role = 'customer';
+  String _selectedRole = 'customer';
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
     _nameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _businessNameController.dispose();
     _businessDescriptionController.dispose();
     super.dispose();
   }
 
-  void _clearFields() {
-    _emailController.clear();
-    _passwordController.clear();
-    _nameController.clear();
-    _phoneController.clear();
-    _businessNameController.clear();
-    _businessDescriptionController.clear();
-    _form.currentState?.reset();
-  }
-
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
 
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Passwords do not match'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final data = {
-      "email": _emailController.text,
-      "password": _passwordController.text,
-      "role": _role,
-      "name": _nameController.text,
-      "phone": _phoneController.text,
+      'name': _nameController.text,
+      'email': _emailController.text,
+      'phone': _phoneController.text,
+      'password': _passwordController.text,
+      'role': _selectedRole,
     };
 
-    if (_role == "vendor") {
+    if (_selectedRole == 'vendor') {
       data.addAll({
-        "businessName": _businessNameController.text,
-        "businessDescription": _businessDescriptionController.text,
+        'businessName': _businessNameController.text,
+        'businessDescription': _businessDescriptionController.text,
       });
     }
 
@@ -82,40 +84,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              children: [
-                                Radio(
-                                  value: 'customer',
-                                  groupValue: _role,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _role = value as String;
-                                      _clearFields();
-                                    });
-                                  },
-                                ),
-                                const Text('Customer'),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                Radio(
-                                  value: 'vendor',
-                                  groupValue: _role,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _role = value as String;
-                                      _clearFields();
-                                    });
-                                  },
-                                ),
-                                const Text('Vendor'),
-                              ],
-                            ),
-                          ],
+                        TextFormField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: "Full Name",
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            return null;
+                          },
                         ),
                         TextFormField(
                           controller: _emailController,
@@ -129,7 +108,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             if (value == null ||
                                 value.trim().isEmpty ||
                                 !value.contains('@')) {
-                              return 'Please enter a valid email address.';
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
+                        TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: "Phone Number",
+                          ),
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter your phone number';
                             }
                             return null;
                           },
@@ -142,45 +134,53 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.trim().length < 6) {
-                              return 'Password must be at least 6 characters.';
+                              return 'Password must be at least 6 characters';
                             }
                             return null;
                           },
                         ),
                         TextFormField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(labelText: 'Name'),
-                          validator: (value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                value.trim().length < 4) {
-                              return 'Enter at least 4 characters.';
-                            }
-                            return null;
-                          },
-                        ),
-                        TextFormField(
-                          controller: _phoneController,
+                          controller: _confirmPasswordController,
                           decoration: const InputDecoration(
-                            labelText: 'Phone Number',
+                            labelText: "Confirm Password",
                           ),
-                          keyboardType: TextInputType.phone,
+                          obscureText: true,
                           validator: (value) {
-                            if (value == null || value.trim().length < 10) {
-                              return 'Enter a valid phone number.';
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please confirm your password';
                             }
                             return null;
                           },
                         ),
-                        if (_role == 'vendor') ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          value: _selectedRole,
+                          decoration: const InputDecoration(labelText: "Role"),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'customer',
+                              child: Text('Customer'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'vendor',
+                              child: Text('Vendor'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRole = value!;
+                            });
+                          },
+                        ),
+                        if (_selectedRole == 'vendor') ...[
                           TextFormField(
                             controller: _businessNameController,
                             decoration: const InputDecoration(
-                              labelText: 'Business Name',
+                              labelText: "Business Name",
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your business name.';
+                                return 'Please enter your business name';
                               }
                               return null;
                             },
@@ -188,12 +188,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           TextFormField(
                             controller: _businessDescriptionController,
                             decoration: const InputDecoration(
-                              labelText: 'Business Description',
+                              labelText: "Business Description",
                             ),
                             maxLines: 3,
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Please enter your business description.';
+                                return 'Please enter your business description';
                               }
                               return null;
                             },

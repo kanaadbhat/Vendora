@@ -18,7 +18,7 @@ class RoleViewModel extends StateNotifier<AsyncValue<String?>> {
   Future<void> fetchUserRole() async {
     state = const AsyncValue.loading();
     try {
-      final response = await _apiService.get('/user/role');
+      final response = await _apiService.get('/user/details');
       if (response.statusCode == 200) {
         state = AsyncValue.data(response.data['user']['role']);
       } else {
