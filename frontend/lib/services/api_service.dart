@@ -26,6 +26,14 @@ class ApiService {
   void _setupInterceptors() {
     _dio.interceptors.add(
       InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Get token before each request
+          final token = await _authService.getToken();
+          if (token != null) {
+            options.headers["Authorization"] = "Bearer $token";
+          }
+          return handler.next(options);
+        },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401 && !_isRefreshing) {
             _isRefreshing = true;
