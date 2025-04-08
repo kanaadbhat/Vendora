@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 
 class Product {
   final String id;
@@ -27,12 +28,12 @@ class Product {
         name: json['name'] ?? '',
         description: json['description'] ?? '',
         price: json['price']?.toString() ?? '0',
-        image: json['image'] ?? 'https://via.placeholder.com/150',
+        image: json['image'] ?? 'https://picsum.photos/id/1011/400/200',
         createdBy: json['createdBy'] ?? '',
       );
     } catch (e) {
-      print('Error parsing product JSON: $e');
-      print('Problematic JSON: $json');
+      debugPrint('Error parsing product JSON: $e');
+      debugPrint('Problematic JSON: $json');
       rethrow;
     }
   }

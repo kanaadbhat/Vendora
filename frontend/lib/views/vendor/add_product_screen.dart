@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/product_viewmodel.dart';
-import 'package:flutter/foundation.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -40,10 +39,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       final price = _priceController.text;
 
       // Use a default image URL if none is provided
-      final imageUrl =
-          _imageController.text.isNotEmpty
-              ? _imageController.text
-              : 'https://via.placeholder.com/150';
+    final imageUrl = _imageController.text.isNotEmpty ? _imageController.text : null;
 
       await ref
           .read(productProvider.notifier)

@@ -105,12 +105,37 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(4),
                         ),
-                        child: Image.network(
-                          subscription.image,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
+                        child:  Image.network(
+                              subscription.image,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Icon(Icons.broken_image, size: 50),
+                                );
+                              },
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                  ),
+                                );
+                              },
+                            ),
                       ),
                     Padding(
                       padding: const EdgeInsets.all(16),

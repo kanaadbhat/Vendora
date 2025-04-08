@@ -51,7 +51,7 @@ class ProductViewModel extends StateNotifier<AsyncValue<List<Product>>> {
     String name,
     String description,
     String price,
-    String image,
+    String? image,
   ) async {
     state = const AsyncValue.loading();
     try {

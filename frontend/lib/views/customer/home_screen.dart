@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
-import '../../viewmodels/user_viewmodel.dart';
-import '../../models/subscription_model.dart';
-import '../../models/user_model.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'explore_vendors_screen.dart';
@@ -58,7 +55,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         );
         break;
       case 2:
-        // Already showing subscriptions
+             Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+        );
         break;
       case 3:
         Navigator.push(

@@ -141,7 +141,7 @@ const subscribeToProduct = asyncHandler(async (req, res) => {
   }
 
   // Get vendor details
-  const vendor = await User.findById(product.vendorId);
+  const vendor = await User.findById(product.createdBy);
   if (!vendor) {
     throw new ApiError(404, "Vendor not found");
   }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../models/product_model.dart';
-import '../../models/subscription_model.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
 
 class VendorProductsScreen extends ConsumerStatefulWidget {
@@ -139,6 +138,31 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
                               height: 200,
                               width: double.infinity,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: Icon(Icons.broken_image, size: 50),
+                                );
+                              },
+                              loadingBuilder: (
+                                context,
+                                child,
+                                loadingProgress,
+                              ) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value:
+                                        loadingProgress.expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         Padding(
