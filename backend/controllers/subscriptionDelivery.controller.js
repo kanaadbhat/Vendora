@@ -48,13 +48,25 @@ export const saveOrUpdateDeliveryConfig = asyncHandler(async (req, res) => {
   const { subscriptionId } = req.params;
   const { days, quantity } = req.body;
 
-  if (!days || !quantity)
+
+  if (!days || quantity === undefined) {
     throw new ApiError(400, "days and quantity are required");
+  }
+
+  // Convert quantity to a number if it's a string
+  const quantityNum = Number(quantity);
+
+  // Validate the quantity
+  if (isNaN(quantityNum) || quantityNum < 1) {
+    throw new ApiError(400, "Quantity must be a valid number ≥ 1");
+  }
 
   const subscription = await Subscriptions.findById(subscriptionId);
-  if (!subscription) throw new ApiError(404, "Subscription not found");
-
-  const config = { days, quantity };
+  if (!subscription) {
+    console.log("Subscription not found:", subscriptionId);  // Debugging line
+    throw new ApiError(404, "Subscription not found");
+  }
+  const config = { days, quantity: quantityNum };
 
   const now = DateTime.now().setZone("Asia/Kolkata");
   const start = now.startOf("day");
@@ -91,6 +103,7 @@ export const saveOrUpdateDeliveryConfig = asyncHandler(async (req, res) => {
     )
   );
 });
+
 
 // Get logs
 export const getDeliveryLogs = asyncHandler(async (req, res) => {
@@ -164,7 +177,7 @@ export const updateSingleDeliveryLog = asyncHandler(async (req, res) => {
   );
 });
 
-/*
+
 // Regenerate logs for current month for one subscription
 export const regenerateDeliveryLogs = asyncHandler(async (req, res) => {
   const { subscriptionId } = req.params;
@@ -191,7 +204,7 @@ export const regenerateDeliveryLogs = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, null, "Logs regenerated for current month"));
 });
-*/
+
 
 // Generate logs for current month for all subscriptions
 export const generateMonthlyDeliveryLogs = asyncHandler(async (req, res) => {

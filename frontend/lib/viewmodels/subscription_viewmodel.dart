@@ -8,6 +8,16 @@ final subscriptionProvider = StateNotifierProvider<
   AsyncValue<List<Subscription>>
 >((ref) => SubscriptionViewModel(ref));
 
+final isProductSubscribedProvider = Provider.family<AsyncValue<bool>, String>((
+  ref,
+  productId,
+) {
+  final subscriptionState = ref.watch(subscriptionProvider);
+  final subscriptions = subscriptionState.value ?? [];
+  final isSubscribed = subscriptions.any((sub) => sub.productId == productId);
+  return AsyncValue.data(isSubscribed);
+});
+
 class SubscriptionViewModel
     extends StateNotifier<AsyncValue<List<Subscription>>> {
   SubscriptionViewModel(this.ref) : super(const AsyncValue.data([]));
@@ -49,29 +59,34 @@ class SubscriptionViewModel
     }
   }
 
-  Future<void> subscribeToProduct(String productId, String password) async {
-    try {
-      debugPrint('Subscribing to product: $productId');
-      final response = await _apiService.post(
-        '/userProduct/subscribe/$productId',
-        data: {'password': password},
-      );
+ Future<String> subscribeToProduct(String productId, String password) async {
+  try {
+    debugPrint('Subscribing to product: $productId');
+    final response = await _apiService.post(
+      '/userProduct/subscribe/$productId',
+      data: {'password': password},
+    );
 
-      if (response.statusCode == 201) {
-        debugPrint('Successfully subscribed to product: $productId');
-        await fetchSubscriptions(); // Refresh the list
-      } else {
-        final error =
-            response.data['message']?.toString() ?? 'Failed to subscribe';
-        debugPrint('Error subscribing to product: $error');
-        throw Exception(error);
-      }
-    } catch (e, stackTrace) {
-      debugPrint('Exception in subscribeToProduct: $e');
-      debugPrint('Stack trace: $stackTrace');
-      rethrow;
+    if (response.statusCode == 201) {
+      final subscriptionData = response.data['data'];
+      final subscriptionId = subscriptionData['_id'];
+
+      debugPrint('Successfully subscribed to product: $productId');
+      await fetchSubscriptions(); // Refresh the list
+
+      return subscriptionId;
+    } else {
+      final error =
+          response.data['message']?.toString() ?? 'Failed to subscribe';
+      debugPrint('Error subscribing to product: $error');
+      throw Exception(error);
     }
+  } catch (e, stackTrace) {
+    debugPrint('Exception in subscribeToProduct: $e');
+    debugPrint('Stack trace: $stackTrace');
+    rethrow;
   }
+}
 
   Future<void> unsubscribeFromProduct(
     String subscriptionId,

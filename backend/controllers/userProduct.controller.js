@@ -5,6 +5,8 @@ import { Product } from "../models/product.model.js";
 import {User} from "../models/user.model.js";
 import {Subscriptions} from "../models/subscriptions.model.js";
 import bcrypt from 'bcryptjs';
+import {SubscriptionDeliveries} from "../models/subscriptionDeliveries.model.js";
+
 
 /*
 //GET VENDOR PRODUCTS
@@ -169,14 +171,12 @@ const unsubscribeFromProduct = asyncHandler(async (req, res) => {
   const { subscriptionId } = req.params;
   const { password } = req.body;
 
-  // Verify user password
   const user = await User.findById(req.user._id);
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid password");
   }
 
-  // Check if subscription exists and belongs to user
   const subscription = await Subscriptions.findOne({
     _id: subscriptionId,
     subscribedBy: req.user._id,
@@ -187,11 +187,14 @@ const unsubscribeFromProduct = asyncHandler(async (req, res) => {
   }
 
   await subscription.deleteOne();
-  
+
+  await SubscriptionDeliveries.deleteOne({ subscriptionId });
+
   return res.status(200).json(
     new ApiResponse(200, null, "Successfully unsubscribed from product")
   );
 });
+
 
 export {
   getAllVendors,

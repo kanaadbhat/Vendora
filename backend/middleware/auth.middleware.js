@@ -8,9 +8,9 @@ const protect = asyncHandler(async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
         try {
             token = req.headers.authorization.split(" ")[1]; 
-            console.log("Token:",token);
+            //console.log("Token:",token);
             const decoded = jwt.verify(token, process.env.JWT_SECRET); 
-            console.log("Decoded ID:", decoded.id);
+            //console.log("Decoded ID:", decoded.id);
 
             
             const  user = await User.findById(decoded.id).select("-password"); 

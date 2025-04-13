@@ -2,6 +2,8 @@ import {asyncHandler} from '../utils/asyncHandler.js';
 import { Product } from "../models/product.model.js";
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+import { Subscriptions } from "../models/subscriptions.model.js";
+import { SubscriptionDeliveries } from "../models/subscriptionDeliveries.model.js";
 
 //ADD PRODUCT BY VENDOR
 const addProduct = asyncHandler(async (req, res) =>{
@@ -57,63 +59,76 @@ const getProducts = asyncHandler(async (req, res) => {
 
 //DELETE PRODUCT 
 const deleteProduct = asyncHandler(async (req, res) => {
-    const { id } = req.params; 
+    const { id } = req.params; // Product ID
     const { password } = req.body;
-    const vendorId = req.user?._id; 
-
+    const vendorId = req.user?._id;
+  
     if (!id) {
-        return res.status(400).json({ 
-            message: "Product ID is required", 
-            success: false 
-        });
+      return res.status(400).json({
+        message: "Product ID is required",
+        success: false,
+      });
     }
-
+  
     if (!password) {
-        return res.status(400).json({ 
-            message: "Password is required to delete product", 
-            success: false 
-        });
+      return res.status(400).json({
+        message: "Password is required to delete product",
+        success: false,
+      });
     }
-
+  
     if (!vendorId) {
-        return res.status(401).json({ 
-            message: "Unauthorized: User not found", 
-            success: false 
-        });
+      return res.status(401).json({
+        message: "Unauthorized: User not found",
+        success: false,
+      });
     }
-
+  
     // Verify password
     const user = await User.findById(vendorId);
     if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(401).json({ 
-            message: "Invalid password", 
-            success: false 
-        });
+      return res.status(401).json({
+        message: "Invalid password",
+        success: false,
+      });
     }
-
+  
     const product = await Product.findById(id);
-
+  
     if (!product) {
-        return res.status(404).json({ 
-            message: "Product not found", 
-            success: false 
-        });
+      return res.status(404).json({
+        message: "Product not found",
+        success: false,
+      });
     }
-
+  
     if (product.createdBy.toString() !== vendorId.toString()) {
-        return res.status(403).json({ 
-            message: "Unauthorized: You can't delete this product", 
-            success: false 
-        });
+      return res.status(403).json({
+        message: "Unauthorized: You can't delete this product",
+        success: false,
+      });
     }
-
-    await Product.findByIdAndDelete(id); 
-
-    return res.status(200).json({ 
-        message: "Product deleted successfully", 
-        success: true 
+  
+    // Step 1: Delete all subscriptions related to this product
+    const subscriptions = await Subscriptions.find({ productId: id });
+    const subscriptionIds = subscriptions.map(sub => sub._id);
+  
+    await Subscriptions.deleteMany({ productId: id });
+  
+    // Step 2: Delete all subscription deliveries for those subscriptions
+    if (subscriptionIds.length > 0) {
+      await SubscriptionDeliveries.deleteMany({ subscriptionId: { $in: subscriptionIds } });
+    }
+  
+    // Step 3: Delete the product
+    await Product.findByIdAndDelete(id);
+  
+    return res.status(200).json({
+      message: "Product and associated subscriptions/deliveries deleted successfully",
+      success: true,
     });
-});
+  });
+  
 
 
 export {addProduct,getProducts, deleteProduct};

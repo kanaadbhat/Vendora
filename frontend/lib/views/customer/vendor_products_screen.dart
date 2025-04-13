@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/user_viewmodel.dart';
 import '../../models/product_model.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
+import '../../viewmodels/subscriptionDelivery.viewmodel.dart';
 
 class VendorProductsScreen extends ConsumerStatefulWidget {
   final String vendorId;
@@ -52,61 +53,139 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
 
   Future<void> _subscribeToProduct(Product product) async {
     final passwordController = TextEditingController();
+    final quantityController = TextEditingController();
+    List<String> selectedDays = [];
 
     return showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Subscribe to Product'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Product: ${product.name}'),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
-                  ),
-                  obscureText: true,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text(
+                'Subscribe to Product',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              TextButton(
-                onPressed: () async {
-                  try {
-                    await ref
-                        .read(subscriptionProvider.notifier)
-                        .subscribeToProduct(
-                          product.id,
-                          passwordController.text,
-                        );
-                    if (mounted) {
-                      Navigator.pop(context);
+              content: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Product: ${product.name}',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Select Delivery Days:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      ...[
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
+                        'Thursday',
+                        'Friday',
+                        'Saturday',
+                        'Sunday',
+                      ].map(
+                        (day) => CheckboxListTile(
+                          title: Text(day),
+                          value: selectedDays.contains(day),
+                          onChanged: (bool? selected) {
+                            setState(() {
+                              if (selected == true) {
+                                selectedDays.add(day);
+                              } else {
+                                selectedDays.remove(day);
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: quantityController,
+                        decoration: const InputDecoration(
+                          labelText: 'Quantity',
+                          hintText: 'Enter quantity',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: passwordController,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          border: OutlineInputBorder(),
+                        ),
+                        obscureText: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    int quantity = int.tryParse(quantityController.text) ?? 0;
+
+                    if (quantity < 1) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Successfully subscribed!'),
+                          content: Text('Quantity must be at least 1.'),
                         ),
                       );
+                      return;
                     }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error subscribing: $e')),
-                      );
+
+                    try {
+                      final subscriptionId = await ref
+                          .read(subscriptionProvider.notifier)
+                          .subscribeToProduct(
+                            product.id,
+                            passwordController.text,
+                          );
+
+                      await ref
+                          .read(subscriptionDeliveryProvider.notifier)
+                          .saveOrUpdateDeliveryConfig(
+                            subscriptionId,
+                            selectedDays,
+                            quantity,
+                          );
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Successfully subscribed!'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error subscribing: $e')),
+                        );
+                      }
                     }
-                  }
-                },
-                child: const Text('Subscribe'),
-              ),
-            ],
-          ),
+                  },
+                  child: const Text('Subscribe'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -124,6 +203,10 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
                 itemCount: _products.length,
                 itemBuilder: (context, index) {
                   final product = _products[index];
+                  final subscriptionStatus = ref.watch(
+                    isProductSubscribedProvider(product.id),
+                  );
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
                     child: Column(
@@ -194,9 +277,28 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
                               const SizedBox(height: 16),
                               SizedBox(
                                 width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () => _subscribeToProduct(product),
-                                  child: const Text('Subscribe'),
+                                child: subscriptionStatus.when(
+                                  data: (isSubscribed) {
+                                    return ElevatedButton(
+                                      onPressed:
+                                          isSubscribed
+                                              ? null // Disable button if already subscribed
+                                              : () =>
+                                                  _subscribeToProduct(product),
+                                      child: Text(
+                                        isSubscribed
+                                            ? 'Already Subscribed'
+                                            : 'Subscribe',
+                                      ),
+                                    );
+                                  },
+                                  loading:
+                                      () => const Center(
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                  error:
+                                      (error, stackTrace) =>
+                                          Text('Error: $error'),
                                 ),
                               ),
                             ],
