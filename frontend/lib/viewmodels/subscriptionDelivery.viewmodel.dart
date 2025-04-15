@@ -75,7 +75,7 @@ class SubscriptionDeliveryViewModel
       }
     } catch (e, stackTrace) {
       debugPrint('Error saving/updating delivery config: $e');
-      state = AsyncValue.error(e, stackTrace);
+      state = AsyncValue.error(e.toString(), stackTrace);
     }
   }
 
@@ -86,11 +86,25 @@ class SubscriptionDeliveryViewModel
     int? quantity,
   }) async {
     try {
-      final response = await _apiService.put(
-        '/subscriptionDelivery/logs/override/$subscriptionId',
-        data: {'date': date, 'cancel': cancel, 'quantity': quantity},
-      );
+try {
+  debugPrint("START: updateSingleDeliveryLog called");
+} catch (e) {
+  debugPrint("Failed before even logging: $e");
+}
+      debugPrint('Subscription ID: $subscriptionId');
+      debugPrint('Date: $date');
+      debugPrint('Cancel: $cancel');
+      debugPrint('Quantity: $quantity');
 
+      final response = await _apiService.post(
+        '/subscriptionDelivery/logs/override/$subscriptionId',
+        data: {
+          'date': date,
+          'cancel': cancel,
+          if (quantity != null) "quantity": quantity,
+        },
+      );
+    debugPrint("Error response: ${response.data}");
       if (response.statusCode == 200) {
         debugPrint('Delivery log updated successfully');
         await fetchDeliveryLogs(subscriptionId); // Refresh logs after updating

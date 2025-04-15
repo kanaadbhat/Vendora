@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
+import '../../viewmodels/subscriptionDelivery.viewmodel.dart';
 import '../../models/subscription_model.dart';
 
 class SubscriptionScreen extends ConsumerStatefulWidget {
@@ -14,7 +15,6 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch subscriptions when screen loads
     Future.microtask(
       () => ref.read(subscriptionProvider.notifier).fetchSubscriptions(),
     );
@@ -80,6 +80,235 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     );
   }
 
+  Future<void> _showEditDialog(Subscription subscription) async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Subscription'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Update Delivery Config'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showUpdateDeliveryDialog(subscription);
+                },
+              ),
+              ListTile(
+                title: const Text('Override Delivery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showOverrideDeliveryDialog(subscription);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showUpdateDeliveryDialog(Subscription subscription) async {
+    final selectedDays = <String>[];
+    final quantityController = TextEditingController();
+    final passwordController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Update Delivery Config'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Product: ${subscription.name}'),
+                    const SizedBox(height: 16),
+                    const Text('Select Delivery Days:'),
+                    ...[
+                      'Monday',
+                      'Tuesday',
+                      'Wednesday',
+                      'Thursday',
+                      'Friday',
+                      'Saturday',
+                      'Sunday',
+                    ].map(
+                      (day) => CheckboxListTile(
+                        title: Text(day),
+                        value: selectedDays.contains(day),
+                        onChanged: (selected) {
+                          setState(() {
+                            if (selected == true) {
+                              selectedDays.add(day);
+                            } else {
+                              selectedDays.remove(day);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                    TextField(
+                      controller: quantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final quantity = int.tryParse(quantityController.text) ?? 0;
+                    if (quantity < 1) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Quantity must be at least 1.'),
+                        ),
+                      );
+                      return;
+                    }
+                    try {
+                      await ref
+                          .read(subscriptionDeliveryProvider.notifier)
+                          .saveOrUpdateDeliveryConfig(
+                            subscription.id,
+                            selectedDays,
+                            quantity,
+                          );
+                      if (context.mounted) Navigator.pop(context);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showOverrideDeliveryDialog(Subscription subscription) async {
+    final dateController = TextEditingController();
+    final quantityController = TextEditingController();
+    bool isCancel = false;
+
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Override Delivery'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: dateController,
+                    decoration: const InputDecoration(
+                      labelText: 'Date (YYYY-MM-DD)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  RadioListTile(
+                    title: const Text('Change Quantity'),
+                    value: false,
+                    groupValue: isCancel,
+                    onChanged: (value) => setState(() => isCancel = value!),
+                  ),
+                  if (!isCancel)
+                    TextField(
+                      controller: quantityController,
+                      decoration: const InputDecoration(
+                        labelText: 'Quantity',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                  RadioListTile(
+                    title: const Text('Cancel Delivery'),
+                    value: true,
+                    groupValue: isCancel,
+                    onChanged: (value) => setState(() => isCancel = value!),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      final quantity =
+                          isCancel
+                              ? null
+                              : int.tryParse(quantityController.text);
+                      if (!isCancel && (quantity == null || quantity < 1)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Quantity must be at least 1.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      await ref
+                          .read(subscriptionDeliveryProvider.notifier)
+                          .updateSingleDeliveryLog(
+                            subscription.id,
+                            dateController.text,
+                            cancel: isCancel,
+                            quantity: isCancel ? null : quantity,
+                          );
+                      if (context.mounted) Navigator.pop(context);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
+                    }
+                  },
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final subscriptionsAsync = ref.watch(subscriptionProvider);
@@ -105,37 +334,31 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(4),
                         ),
-                        child:  Image.network(
-                              subscription.image,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.broken_image, size: 50),
-                                );
-                              },
-                              loadingBuilder: (
-                                context,
-                                child,
-                                loadingProgress,
-                              ) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value:
-                                        loadingProgress.expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                  ),
-                                );
-                              },
-                            ),
+                        child: Image.network(
+                          subscription.image,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image, size: 50),
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     Padding(
                       padding: const EdgeInsets.all(16),
@@ -174,17 +397,29 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                             style: const TextStyle(color: Colors.grey),
                           ),
                           const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  () => _unsubscribeFromProduct(subscription),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed:
+                                      () => _showEditDialog(subscription),
+                                  child: const Text('Edit'),
+                                ),
                               ),
-                              child: const Text('Unsubscribe'),
-                            ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed:
+                                      () =>
+                                          _unsubscribeFromProduct(subscription),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Unsubscribe'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

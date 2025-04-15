@@ -141,11 +141,17 @@ class ApiService {
   Response _handleError(DioException e) {
     if (e.response != null) {
       debugPrint("API Error: ${e.response?.data}");
-      if (e.response?.statusCode == 401) {
-        // Token expired or invalid
-        logout();
+
+      final data = e.response?.data;
+
+      if (data is Map && data['message'] is String) {
+        debugPrint("Throwing String message: ${data['message']}");
+        throw Exception(data['message']);
+      } else if (data is String) {
+        throw Exception(data);
+      } else {
+        throw Exception('Unexpected error from server.');
       }
-      return e.response!;
     } else if (e.type == DioExceptionType.connectionTimeout) {
       debugPrint("Connection Timeout");
       throw Exception(
@@ -153,9 +159,7 @@ class ApiService {
       );
     } else if (e.type == DioExceptionType.receiveTimeout) {
       debugPrint("Receive Timeout");
-      throw Exception(
-        "Server is taking too long to respond. Please try again.",
-      );
+      throw Exception("Server took too long to respond. Please try again.");
     } else {
       debugPrint("Network Error: ${e.message}");
       throw Exception("Network Error: ${e.message}");

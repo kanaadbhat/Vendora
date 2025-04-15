@@ -187,6 +187,7 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
         );
       },
     );
+    
   }
 
   @override
