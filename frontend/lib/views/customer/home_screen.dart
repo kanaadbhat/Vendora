@@ -8,6 +8,8 @@ import 'explore_vendors_screen.dart';
 import 'subscription_screen.dart';
 import 'chat_screen.dart';
 import '../auth/login_screen.dart';
+import '../../models/subscription.model.dart' as ChatSubscription;
+import '../../models/subscription_model.dart' as HomeSubscription;
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -55,16 +57,45 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         );
         break;
       case 2:
-             Navigator.push(
+        Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
         );
         break;
       case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ChatScreen()),
-        );
+        final user = ref.read(authProvider).value;
+        final subscriptions = ref.read(subscriptionProvider).value;
+        if (user != null && subscriptions != null && subscriptions.isNotEmpty) {
+          // Convert HomeSubscription to ChatSubscription
+          final chatSubscriptions =
+              subscriptions
+                  .map(
+                    (sub) => ChatSubscription.Subscription(
+                      id: sub.id,
+                      productName: sub.name,
+                      vendorName: sub.vendorName,
+                      deliveryLogs: [], // Initialize with empty delivery logs
+                    ),
+                  )
+                  .toList();
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => ChatScreen(
+                    userId: user.id,
+                    subscriptions: chatSubscriptions,
+                  ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please subscribe to a vendor to start chatting'),
+            ),
+          );
+        }
         break;
     }
   }
@@ -252,12 +283,52 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                   context,
                                   'Chat with AI',
                                   Icons.chat,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ChatScreen(),
-                                    ),
-                                  ),
+                                  () {
+                                    final user = ref.read(authProvider).value;
+                                    final subscriptions =
+                                        ref.read(subscriptionProvider).value;
+                                    if (user != null &&
+                                        subscriptions != null &&
+                                        subscriptions.isNotEmpty) {
+                                      // Convert HomeSubscription to ChatSubscription
+                                      final chatSubscriptions =
+                                          subscriptions
+                                              .map(
+                                                (
+                                                  sub,
+                                                ) => ChatSubscription.Subscription(
+                                                  id: sub.id,
+                                                  productName: sub.name,
+                                                  vendorName: sub.vendorName,
+                                                  deliveryLogs:
+                                                      [], // Initialize with empty delivery logs
+                                                ),
+                                              )
+                                              .toList();
+
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) => ChatScreen(
+                                                userId: user.id,
+                                                subscriptions:
+                                                    chatSubscriptions,
+                                              ),
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please subscribe to a vendor to start chatting',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),

@@ -1,76 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/chat_message.model.dart';
+import '../../models/subscription.model.dart';
+import '../../viewmodels/chat_viewmodel.dart';
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class ChatScreen extends ConsumerStatefulWidget {
+  final String userId;
+  final List<Subscription> subscriptions;
+
+  const ChatScreen({
+    super.key,
+    required this.userId,
+    required this.subscriptions,
+  });
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-  final List<ChatMessage> _messages = [];
-  bool _isLoading = false;
+  final ScrollController _scrollController = ScrollController();
 
-  void _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
-
-    final userMessage = _messageController.text;
-    _messageController.clear();
-
-    setState(() {
-      _messages.add(ChatMessage(text: userMessage, isUser: true));
-      _isLoading = true;
-    });
-
-    // TODO: Implement AI chatbot integration
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          text: 'I am an AI chatbot. How can I help you today?',
-          isUser: false,
-        ),
-      );
-      _isLoading = false;
+  @override
+  void initState() {
+    super.initState();
+    // Load chat history when screen starts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(chatViewModelProvider.notifier).loadChatHistory(widget.userId);
     });
   }
 
   @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _sendMessage() {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) return;
+
+    ref
+        .read(chatViewModelProvider.notifier)
+        .sendMessage(
+          message: message,
+          userId: widget.userId,
+          subscriptions: widget.subscriptions,
+        );
+
+    _messageController.clear();
+    _scrollToBottom();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final chatState = ref.watch(chatViewModelProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat with AI')),
+      appBar: AppBar(
+        title: const Text('Delivery Assistant'),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessage(message);
-              },
-            ),
+            child:
+                chatState.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                      controller: _scrollController,
+                      itemCount: chatState.messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = chatState.messages[index];
+                        return _ChatBubble(message: msg);
+                      },
+                    ),
           ),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
+          if (chatState.error != null)
+            Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.red[100],
+              child: Text(
+                chatState.error!,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6),
             child: Row(
               children: [
                 Expanded(
@@ -78,16 +109,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _messageController,
                     decoration: const InputDecoration(
                       hintText: 'Type your message...',
-                      border: OutlineInputBorder(),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
-                const SizedBox(width: 8),
                 IconButton(
-                  onPressed: _sendMessage,
                   icon: const Icon(Icons.send),
-                  color: Theme.of(context).primaryColor,
+                  onPressed: _sendMessage,
                 ),
               ],
             ),
@@ -96,38 +124,30 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMessage(ChatMessage message) {
+class _ChatBubble extends StatelessWidget {
+  final ChatMessage message;
+
+  const _ChatBubble({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.type == MessageType.user;
     return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color:
-              message.isUser
-                  ? Theme.of(context).primaryColor
-                  : Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
+          color: isUser ? Colors.blueAccent : Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          message.text,
-          style: TextStyle(color: message.isUser ? Colors.white : Colors.black),
+          message.content,
+          style: TextStyle(color: isUser ? Colors.white : Colors.black87),
         ),
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    super.dispose();
-  }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-
-  ChatMessage({required this.text, required this.isUser});
 }

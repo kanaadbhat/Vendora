@@ -15,12 +15,13 @@ import userRouter from './routes/user.routes.js';
 import vendorProductRouter from './routes/vendorProduct.routes.js';
 import userProductRouter from './routes/userProduct.routes.js';
 import subscriptionDeliveries from './routes/subscriptionDelivery.routes.js';
+import chatRouter from './routes/chat.routes.js';
 
 app.use('/api/user' , userRouter);
 app.use('/api/vendorProduct',vendorProductRouter);
 app.use('/api/userProduct',userProductRouter);
 app.use('/api/subscriptionDelivery',subscriptionDeliveries);
-
+app.use('/api/chat', chatRouter);
 
 import "./utils/cron.js";
 app.listen(process.env.PORT , () => {

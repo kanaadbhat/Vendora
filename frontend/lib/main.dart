@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'views/auth/auth_screen.dart';
 import 'views/customer/home_screen.dart';
 import 'views/vendor/home_screen.dart';
@@ -7,7 +8,9 @@ import 'viewmodels/role_viewmodel.dart';
 import 'widgets/error_widget.dart';
 import 'widgets/loading_widget.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: "assets/.env");
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -21,6 +24,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Vendora',
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: roleState.when(
         data: (role) {
           if (role == "customer") {
