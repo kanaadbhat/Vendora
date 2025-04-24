@@ -4,16 +4,19 @@ const chatSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: [true, 'User ID is required'],
   },
   content: {
     type: String,
-    required: true,
+    required: [true, 'Content is required'],
   },
   type: {
     type: String,
-    enum: ['user', 'ai', 'system', 'error'],
-    required: true,
+    enum: {
+      values: ['user', 'ai', 'system', 'error'],
+      message: '{VALUE} is not a valid message type',
+    },
+    required: [true, 'Message type is required'],
   },
   timestamp: {
     type: Date,
@@ -21,8 +24,14 @@ const chatSchema = new mongoose.Schema({
   },
   metadata: {
     type: Map,
+    of: mongoose.Schema.Types.Mixed,
     default: {},
   },
+}, {
+  timestamps: true,
 });
+
+// Add index for faster queries
+chatSchema.index({ userId: 1, timestamp: -1 });
 
 export const Chat = mongoose.model("Chat", chatSchema);

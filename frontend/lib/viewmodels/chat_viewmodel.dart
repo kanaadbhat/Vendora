@@ -37,29 +37,54 @@ class ChatViewModel extends StateNotifier<ChatState> {
     : super(const ChatState());
 
   Future<void> loadChatHistory(String userId) async {
+    if (userId.isEmpty) {
+      state = state.copyWith(error: 'User ID is required', isLoading: false);
+      return;
+    }
+
     state = state.copyWith(isLoading: true);
     try {
       final response = await _apiService.get('/chat/$userId');
       if (response.statusCode == 200) {
+        final List<dynamic> messagesData = response.data as List<dynamic>;
         final messages =
-            (response.data as List)
-                .map((e) => ChatMessage.fromJson(e as Map<String, dynamic>))
+            messagesData
+                .map((e) {
+                  try {
+                    return ChatMessage.fromJson(e as Map<String, dynamic>);
+                  } catch (e) {
+                    debugPrint('Error parsing message: $e');
+                    return null;
+                  }
+                })
+                .whereType<ChatMessage>()
                 .toList();
+
         state = state.copyWith(messages: messages, isLoading: false);
       } else {
         state = state.copyWith(
-          error: 'Failed to load chat history',
+          error: 'Failed to load chat history: ${response.statusCode}',
           isLoading: false,
         );
       }
     } catch (e) {
-      state = state.copyWith(error: e.toString(), isLoading: false);
+      state = state.copyWith(
+        error: 'Error loading chat history: $e',
+        isLoading: false,
+      );
     }
   }
 
   Future<void> saveMessage(ChatMessage message) async {
     try {
-      final response = await _apiService.post('/chat', data: message.toJson());
+      final messageData = {
+        'userId': message.metadata?['userId'] ?? '',
+        'content': message.content,
+        'type': message.type.toString().split('.').last,
+        'metadata': message.metadata ?? {},
+      };
+
+      final response = await _apiService.post('/chat', data: messageData);
       if (response.statusCode != 201) {
         debugPrint('Failed to save message: ${response.statusCode}');
       }
@@ -73,12 +98,18 @@ class ChatViewModel extends StateNotifier<ChatState> {
     required String userId,
     required List<Subscription> subscriptions,
   }) async {
+    if (userId.isEmpty) {
+      state = state.copyWith(error: 'User ID is required');
+      return;
+    }
+
     // Add user message to state
     final userMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: message,
       type: MessageType.user,
       timestamp: DateTime.now(),
+      metadata: {'userId': userId},
     );
     state = state.copyWith(messages: [...state.messages, userMessage]);
 
@@ -107,27 +138,31 @@ class ChatViewModel extends StateNotifier<ChatState> {
         }
       }
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: 'Error sending message: $e');
     }
   }
 
   Future<void> _handleBackendAction(Map<String, dynamic> apiCall) async {
-    final endpoint = apiCall['endpoint'] as String;
-    final method = apiCall['method'] as String;
-    final body = apiCall['body'];
+    try {
+      final endpoint = apiCall['endpoint'] as String;
+      final method = apiCall['method'] as String;
+      final body = apiCall['body'];
 
-    switch (method) {
-      case 'POST':
-        await _apiService.post(endpoint, data: body);
-        break;
-      case 'PUT':
-        await _apiService.put(endpoint, data: body);
-        break;
-      case 'GET':
-        await _apiService.get(endpoint);
-        break;
-      default:
-        throw Exception('Unsupported HTTP method: $method');
+      switch (method) {
+        case 'POST':
+          await _apiService.post(endpoint, data: body);
+          break;
+        case 'PUT':
+          await _apiService.put(endpoint, data: body);
+          break;
+        case 'GET':
+          await _apiService.get(endpoint);
+          break;
+        default:
+          throw Exception('Unsupported HTTP method: $method');
+      }
+    } catch (e) {
+      debugPrint('Error handling backend action: $e');
     }
   }
 }
