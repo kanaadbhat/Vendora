@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
-import '../../models/subscription.model.dart';
+import '../../models/subscription_model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {

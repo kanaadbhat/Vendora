@@ -29,12 +29,18 @@ class ChatMessage {
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      id: json['id'] as String,
-      content: json['content'] as String,
+      id:
+          json['id']?.toString() ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      content: json['content']?.toString() ?? '',
       type: MessageType.values.firstWhere(
         (e) => e.toString() == 'MessageType.${json['type']}',
+        orElse: () => MessageType.system,
       ),
-      timestamp: DateTime.parse(json['timestamp'] as String),
+      timestamp:
+          json['timestamp'] != null
+              ? DateTime.parse(json['timestamp'].toString())
+              : DateTime.now(),
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }

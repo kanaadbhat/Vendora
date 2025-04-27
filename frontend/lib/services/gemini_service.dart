@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/chat_message.model.dart';
-import '../models/subscription.model.dart';
+import '../models/subscription_model.dart';
 import '../services/api_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -41,47 +41,58 @@ class GeminiService {
 
       // Handle introduction questions
       if (_isIntroductionQuestion(message)) {
-        return _handleIntroductionQuestion();
+        return _handleIntroductionQuestion(userId);
       }
 
-      // First try normal conversation
-      if (!_isSubscriptionRelated(message)) {
-        final response = await _chat.sendMessage(Content.text(message));
-        return _createSimpleResponse(
-          response.text ?? 'I cannot respond right now',
-        );
-      }
-
-      // Check if user is asking for delivery logs
+      // Handle delivery log queries
       if (_isDeliveryLogQuery(message)) {
         return _handleDeliveryLogQuery(userId, message, subscriptions);
       }
 
-      // For potentially subscription-related messages
-      final prompt = _buildSubscriptionPrompt(userId, message, subscriptions);
+      // Handle subscription listing
+      if (_isSubscriptionListQuery(message)) {
+        return _handleSubscriptionList(userId, subscriptions);
+      }
+
+      // First try normal conversation for non-actionable queries
+      if (!_isPotentialAction(message)) {
+        final prompt = _buildActionPrompt(userId, message, subscriptions);
+        final response = await _chat.sendMessage(Content.text(prompt));
+        return _createAiMessage(
+          userId,
+          response.text ?? 'I cannot respond right now',
+        );
+      }
+
+      // For potentially actionable messages
+      final prompt = _buildActionPrompt(userId, message, subscriptions);
       final response = await _chat.sendMessage(Content.text(prompt));
       final text = response.text?.trim() ?? '';
 
-      if (text.isEmpty)
-        return _createSimpleResponse('I cannot respond right now');
+      if (text.isEmpty) {
+        return _createAiMessage(userId, 'I cannot respond right now');
+      }
 
-      // Try to parse as subscription response
+      // Try to parse as potential action
       try {
         final jsonMap = _extractJson(text);
-        if (jsonMap.isNotEmpty && _isValidSubscriptionResponse(jsonMap)) {
+        if (jsonMap.isNotEmpty && _isValidActionResponse(jsonMap)) {
           // Store the potential action and ask for confirmation
           _pendingAction = jsonMap;
-          return _createConfirmationMessage(jsonMap);
+          return _createConfirmationMessage(userId, jsonMap);
         }
       } catch (e) {
-        debugPrint('Subscription parsing failed: $e');
+        debugPrint('Action parsing failed: $e');
       }
 
       // Fallback to normal response
-      return _createSimpleResponse(text);
+      return _createAiMessage(userId, text);
     } catch (e) {
       debugPrint('GeminiService error: $e');
-      return _createSimpleResponse("Sorry, I can't help with that right now");
+      return _createAiMessage(
+        userId,
+        "Sorry, I can't help with that right now",
+      );
     }
   }
 
@@ -92,9 +103,58 @@ class GeminiService {
       'delivery history',
       'delivery logs',
       'past deliveries',
-      'when are my deliveries'
+      'when are my deliveries',
     ];
     return keywords.any((word) => message.toLowerCase().contains(word));
+  }
+
+  bool _isSubscriptionListQuery(String message) {
+    final keywords = [
+      'what subscriptions do I have',
+      'list my subscriptions',
+      'my current subscriptions',
+      'show my subscriptions',
+      'what am I subscribed to',
+      'what products have I subscribed to',
+      'what subscriptions so i currently have',
+      'what products have i subscribed currently',
+    ];
+    return keywords.any((word) => message.toLowerCase().contains(word));
+  }
+
+  ChatMessage _handleSubscriptionList(
+    String userId,
+    List<Subscription> subscriptions,
+  ) {
+    if (subscriptions.isEmpty) {
+      return _createAiMessage(
+        userId,
+        'You currently have no active subscriptions.',
+      );
+    }
+
+    final buffer = StringBuffer();
+    buffer.writeln(
+      'You have ${subscriptions.length} active subscription${subscriptions.length > 1 ? 's' : ''}:',
+    );
+
+    for (final sub in subscriptions) {
+      buffer.writeln('\n• ${sub.name} from ${sub.vendorName}');
+      buffer.writeln('  - Price: \$${sub.price.toStringAsFixed(2)}');
+
+      if (sub.description.isNotEmpty) {
+        buffer.writeln('  - Description: ${sub.description}');
+      }
+
+      buffer.writeln('  - Since: ${_formatDate(sub.createdAt)}');
+      buffer.writeln('  - Subscription ID: ${sub.id}');
+    }
+
+    return _createAiMessage(userId, buffer.toString());
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   Future<ChatMessage> _handleDeliveryLogQuery(
@@ -103,50 +163,51 @@ class GeminiService {
     List<Subscription> subscriptions,
   ) async {
     try {
-      // Find which subscription they're asking about
       final subscription = _findRelevantSubscription(message, subscriptions);
       if (subscription == null) {
-        return _createSimpleResponse('Which subscription are you asking about?');
+        return _createAiMessage(
+          userId,
+          'Which subscription are you asking about?',
+        );
       }
 
-      // Get delivery logs
       final response = await _api.get('/logs/${subscription.id}');
       if (response.statusCode == 200) {
         final logs = response.data as List;
-        return ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: _formatDeliveryLogs(logs, subscription),
-          type: MessageType.ai,
-          timestamp: DateTime.now(),
-          metadata: {
-            'userId': userId,
-            'subscriptionId': subscription.id,
-            'isLogResponse': true
-          },
+        return _createAiMessage(
+          userId,
+          _formatDeliveryLogs(logs, subscription),
+          metadata: {'subscriptionId': subscription.id, 'isLogResponse': true},
         );
       } else {
-        return _createSimpleResponse('Could not retrieve delivery logs');
+        return _createAiMessage(userId, 'Could not retrieve delivery logs');
       }
     } catch (e) {
       debugPrint('Delivery log query error: $e');
-      return _createSimpleResponse('Error retrieving delivery logs');
+      return _createAiMessage(userId, 'Error retrieving delivery logs');
     }
   }
 
   String _formatDeliveryLogs(List<dynamic> logs, Subscription subscription) {
     if (logs.isEmpty) {
-      return 'No delivery logs found for ${subscription.productName}';
+      return 'No delivery logs found for ${subscription.name}';
     }
 
     final buffer = StringBuffer();
-    buffer.writeln('Here are your delivery logs for ${subscription.productName}:');
-    
-    for (final log in logs) {
+    buffer.writeln('Delivery history for ${subscription.name}:');
+
+    for (final log in logs.take(5)) {
       final date = log['date'] ?? 'Unknown date';
       final status = log['canceled'] == true ? '❌ Canceled' : '✅ Delivered';
       buffer.writeln('• $date - $status');
     }
-    
+
+    if (logs.length > 5) {
+      buffer.writeln(
+        '\nShowing 5 most recent of ${logs.length} total deliveries',
+      );
+    }
+
     return buffer.toString();
   }
 
@@ -155,13 +216,13 @@ class GeminiService {
     List<Subscription> subscriptions,
   ) {
     if (subscriptions.length == 1) return subscriptions.first;
-    
+
     for (final sub in subscriptions) {
-      if (message.toLowerCase().contains(sub.productName.toLowerCase())) {
+      if (message.toLowerCase().contains(sub.name.toLowerCase())) {
         return sub;
       }
     }
-    
+
     return null;
   }
 
@@ -176,22 +237,18 @@ class GeminiService {
     return introQuestions.any((q) => message.toLowerCase().contains(q));
   }
 
-  ChatMessage _handleIntroductionQuestion() {
-    return ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content:
-          '''I am an AI assistant integrated into the Vendora Delivery Management app. I can help you with:
+  ChatMessage _handleIntroductionQuestion(String userId) {
+    return _createAiMessage(
+      userId,
+      '''I am your Vendora Delivery Assistant. I can help you with:
 
-1. Managing your subscriptions
-2. Updating delivery schedules
-3. Modifying delivery quantities
-4. Canceling or rescheduling deliveries
-5. Checking delivery status
-6. Answering questions about your subscriptions
+• Viewing your subscriptions
+• Checking delivery schedules
+• Updating delivery preferences
+• Canceling or rescheduling deliveries
+• Answering questions about your orders
 
-Just let me know what you need help with!''',
-      type: MessageType.ai,
-      timestamp: DateTime.now(),
+What would you like help with today?''',
     );
   }
 
@@ -205,33 +262,39 @@ Just let me know what you need help with!''',
         // Execute the confirmed action
         final apiCall = action['apiCall'];
         if (apiCall is Map<String, dynamic>) {
-          _executeApiCall(apiCall); // Note: Fire and forget
+          _executeApiCall(apiCall)
+              .then((_) {
+                return _createAiMessage(
+                  userId,
+                  '✅ ${action['successMessage'] ?? 'Action completed successfully!'}',
+                  metadata: {...action, 'confirmed': true, 'apiCall': apiCall},
+                );
+              })
+              .catchError((e) {
+                return _createAiMessage(
+                  userId,
+                  '❌ Failed to complete the action. Please try again.',
+                  metadata: {'error': e.toString()},
+                );
+              });
         }
-        return ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: action['confirmation']?.toString() ?? '✅ Action completed!',
-          type: MessageType.ai,
-          timestamp: DateTime.now(),
-          metadata: {
-            ...action,
-            'userId': userId,
-            'confirmed': true,
-            if (apiCall != null) 'apiCall': apiCall,
-          },
+        return _createAiMessage(
+          userId,
+          'Processing your request...',
+          metadata: {'isProcessing': true},
         );
       } else {
-        return ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          content: "Okay, I won't make any changes.",
-          type: MessageType.ai,
-          timestamp: DateTime.now(),
-          metadata: {'userId': userId, 'confirmed': false},
+        return _createAiMessage(
+          userId,
+          "Okay, I won't make any changes.",
+          metadata: {'confirmed': false},
         );
       }
     } catch (e) {
       debugPrint('Confirmation handling error: $e');
       _pendingAction = null;
-      return _createSimpleResponse(
+      return _createAiMessage(
+        userId,
         "Sorry, I couldn't process that confirmation",
       );
     }
@@ -253,104 +316,87 @@ Just let me know what you need help with!''',
     );
   }
 
-  ChatMessage _createConfirmationMessage(Map<String, dynamic> action) {
-    final confirmationQuestion = '''
-I think you want to ${action['intent'] == 'config' ? 'update delivery configuration' : 'override a delivery'}:
-${action['confirmation']}
-
-Is this correct? Please respond with "yes" or "no".
-''';
-
-    return ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: confirmationQuestion,
-      type: MessageType.ai,
-      timestamp: DateTime.now(),
+  ChatMessage _createConfirmationMessage(
+    String userId,
+    Map<String, dynamic> action,
+  ) {
+    return _createAiMessage(
+      userId,
+      action['confirmation'] ?? 'Should I proceed with this change?',
       metadata: {...action, 'isConfirmationPrompt': true},
     );
   }
 
-  bool _isSubscriptionRelated(String message) {
+  bool _isPotentialAction(String message) {
     final keywords = [
-      'delivery',
-      'subscription',
-      'order',
       'change',
-      'cancel',
-      'reschedule',
       'update',
       'modify',
+      'cancel',
+      'reschedule',
+      'switch',
+      'set',
+      'edit',
     ];
     return keywords.any((word) => message.toLowerCase().contains(word));
   }
 
-  ChatMessage _createSimpleResponse(String text) {
+  ChatMessage _createAiMessage(
+    String userId,
+    String content, {
+    Map<String, dynamic>? metadata,
+  }) {
     return ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: text,
+      content: content,
       type: MessageType.ai,
       timestamp: DateTime.now(),
+      metadata: {'userId': userId, ...?metadata},
     );
   }
 
-  String _buildSubscriptionPrompt(
+  String _buildActionPrompt(
     String userId,
     String message,
     List<Subscription> subs,
   ) {
     final subList = subs
-        .map((s) {
-          return '''
-Subscription: ${s.productName} from ${s.vendorName}
-ID: ${s.id}
-''';
-        })
-        .join('\n\n');
+        .map(
+          (s) => '''
+- ${s.name} from ${s.vendorName}
+  • Price: \$${s.price.toStringAsFixed(2)}
+  • Subscribed since: ${_formatDate(s.createdAt)}
+''',
+        )
+        .join('\n');
 
-    return '''You are an AI assistant for the Vendora Delivery Management app. When you detect subscription-related requests, respond in JSON format:
+    return '''You are an AI assistant for Vendora Delivery Management app. You have FULL ACCESS to the user's subscription data and should respond accordingly.
 
-Current subscriptions:
+Current Subscriptions:
 $subList
 
-Possible actions:
-1. Save/Update delivery configuration - use "intent": "config"
-   - Endpoint: /config/:subscriptionId
-   - Method: POST
-   - Body: { "days": ["monday",...], "quantity": number }
+Response Rules:
+1. When asked about subscriptions, ALWAYS list the actual subscriptions shown above
+2. Never say you can't access subscription information
+3. Be helpful and specific about the user's actual subscriptions
+4. For modification requests, ask for confirmation
 
-2. Override single delivery log - use "intent": "override"
-   - Endpoint: /logs/override/:subscriptionId
-   - Method: POST
-   - Body: { "date": "YYYY-MM-DD", "cancel": boolean, "quantity": number }
+Example Responses:
+User: "What products have I subscribed to?"
+Response: "You currently have these subscriptions:\n[list their actual subscriptions]"
 
-For subscription requests, respond EXACTLY in this format:
-{
-  "intent": "config"|"override",
-  "entities": {
-    "subscriptionId": "ID",
-    "date": "YYYY-MM-DD",
-    "days": ["monday",...],
-    "quantity": number,
-    "cancel": boolean
-  },
-  "confirmation": "clear message summarizing the action",
-  "apiCall": {
-    "endpoint": "string",
-    "method": "POST",
-    "body": { ... }
-  }
-}
+User: "When did I subscribe to X?"
+Response: "You subscribed to X on [date]"
 
-For general questions about subscriptions or delivery configurations, respond in a natural, conversational way without JSON formatting.
-
-User message: "$message"''';
+User Message: "$message"''';
   }
 
-  bool _isValidSubscriptionResponse(Map<String, dynamic> json) {
-    return json.containsKey('intent') &&
-        ['config', 'override'].contains(json['intent']) &&
-        json.containsKey('confirmation') &&
-        json.containsKey('apiCall');
+  bool _isValidActionResponse(Map<String, dynamic> json) {
+    return json.containsKey('user_message') &&
+        json.containsKey('action') &&
+        json['action'] is Map &&
+        (json['action'] as Map).containsKey('intent') &&
+        (json['action'] as Map).containsKey('apiCall');
   }
 
   Map<String, dynamic> _extractJson(String text) {
@@ -368,18 +414,28 @@ User message: "$message"''';
 
   Future<void> _executeApiCall(Map<String, dynamic> apiCall) async {
     try {
-      final endpoint = apiCall['endpoint']?.toString() ?? '';
-      final method = apiCall['method']?.toString() ?? '';
+      final endpoint = apiCall['endpoint'] as String;
+      final method = apiCall['method'] as String;
       final body = apiCall['body'];
 
-      if (endpoint.isEmpty || method != 'POST') {
-        throw Exception('Invalid API call');
+      dynamic response;
+      switch (method) {
+        case 'POST':
+          response = await _api.post(endpoint, data: body);
+          break;
+        case 'PUT':
+          response = await _api.put(endpoint, data: body);
+          break;
+        default:
+          throw Exception('Unsupported HTTP method: $method');
       }
 
-      await _api.post(endpoint, data: body);
+      if (response.statusCode != 200) {
+        throw Exception('API call failed with status ${response.statusCode}');
+      }
     } catch (e) {
-      debugPrint('API call failed: $e');
-      rethrow;
+      debugPrint('Error executing API call: $e');
+      throw e;
     }
   }
 }

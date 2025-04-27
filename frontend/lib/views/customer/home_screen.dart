@@ -8,8 +8,8 @@ import 'explore_vendors_screen.dart';
 import 'subscription_screen.dart';
 import 'chat_screen.dart';
 import '../auth/login_screen.dart';
-import '../../models/subscription.model.dart' as ChatSubscription;
-import '../../models/subscription_model.dart' as HomeSubscription;
+import '../../models/subscription_model.dart' as ChatSubscription;
+//import '../../models/subscription_model.dart' as HomeSubscription;
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -62,19 +62,26 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
         );
         break;
+      // In the navigation case 3 (chat screen):
       case 3:
         final user = ref.read(authProvider).value;
         final subscriptions = ref.read(subscriptionProvider).value;
         if (user != null && subscriptions != null && subscriptions.isNotEmpty) {
-          // Convert HomeSubscription to ChatSubscription
+          // Convert to ChatSubscription with ALL required parameters
           final chatSubscriptions =
               subscriptions
                   .map(
                     (sub) => ChatSubscription.Subscription(
                       id: sub.id,
-                      productName: sub.name,
+                      subscribedBy: user.id, // Using current user's ID
+                      productId: sub.productId,
+                      name: sub.name,
+                      description: sub.description,
+                      price: sub.price,
+                      image: sub.image,
+                      vendorId: sub.vendorId,
                       vendorName: sub.vendorName,
-                      deliveryLogs: [], // Initialize with empty delivery logs
+                      createdAt: sub.createdAt,
                     ),
                   )
                   .toList();
@@ -290,19 +297,24 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                     if (user != null &&
                                         subscriptions != null &&
                                         subscriptions.isNotEmpty) {
-                                      // Convert HomeSubscription to ChatSubscription
                                       final chatSubscriptions =
                                           subscriptions
                                               .map(
-                                                (
-                                                  sub,
-                                                ) => ChatSubscription.Subscription(
-                                                  id: sub.id,
-                                                  productName: sub.name,
-                                                  vendorName: sub.vendorName,
-                                                  deliveryLogs:
-                                                      [], // Initialize with empty delivery logs
-                                                ),
+                                                (sub) =>
+                                                    ChatSubscription.Subscription(
+                                                      id: sub.id,
+                                                      subscribedBy: user.id,
+                                                      productId: sub.productId,
+                                                      name: sub.name,
+                                                      description:
+                                                          sub.description,
+                                                      price: sub.price,
+                                                      image: sub.image,
+                                                      vendorId: sub.vendorId,
+                                                      vendorName:
+                                                          sub.vendorName,
+                                                      createdAt: sub.createdAt,
+                                                    ),
                                               )
                                               .toList();
 

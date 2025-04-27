@@ -10,7 +10,7 @@ const getChatHistory = asyncHandler(async (req, res) => {
       return res.status(400).json({ error: "User ID is required" });
     }
 
-    const chats = await Chat.find({ userId }).sort({ timestamp: -1 }).limit(50); // Get last 50 messages
+    const chats = await Chat.find({ userId : userId }).sort({ timestamp: -1 }).limit(50); // Get last 50 messages
     res.json(chats);
   } catch (error) {
     ApiError(res, error);

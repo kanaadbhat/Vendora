@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../models/chat_message.model.dart';
-import '../models/subscription.model.dart';
+import '../models/subscription_model.dart';
 import '../services/gemini_service.dart';
 import '../services/api_service.dart';
 
@@ -77,12 +77,19 @@ class ChatViewModel extends StateNotifier<ChatState> {
 
   Future<void> saveMessage(ChatMessage message) async {
     try {
+      final sanitizedMetadata = Map<String, dynamic>.from(
+        message.metadata ?? {},
+      );
+      sanitizedMetadata.remove('apiCall'); 
+
       final messageData = {
         'userId': message.metadata?['userId'] ?? '',
         'content': message.content,
         'type': message.type.toString().split('.').last,
-        'metadata': message.metadata ?? {},
+        'metadata': sanitizedMetadata,
       };
+
+      debugPrint('Saving Message: $messageData');
 
       final response = await _apiService.post('/chat', data: messageData);
       if (response.statusCode != 201) {
@@ -93,67 +100,84 @@ class ChatViewModel extends StateNotifier<ChatState> {
     }
   }
 
-  Future<void> sendMessage({
-    required String message,
-    required String userId,
-    required List<Subscription> subscriptions,
-  }) async {
-    if (userId.isEmpty) {
-      state = state.copyWith(error: 'User ID is required');
-      return;
-    }
+ Future<void> sendMessage({
+  required String message,
+  required String userId,
+  required List<Subscription> subscriptions,
+}) async {
+  if (userId.isEmpty) {
+    state = state.copyWith(error: 'User ID is required');
+    return;
+  }
 
-    // Add user message to state
-    final userMessage = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: message,
-      type: MessageType.user,
-      timestamp: DateTime.now(),
-      metadata: {'userId': userId},
-    );
-    state = state.copyWith(messages: [...state.messages, userMessage]);
+  // Add user message to state
+  final userMessage = ChatMessage(
+    id: DateTime.now().millisecondsSinceEpoch.toString(),
+    content: message,
+    type: MessageType.user,
+    timestamp: DateTime.now(),
+    metadata: {'userId': userId},
+  );
+  state = state.copyWith(messages: [...state.messages, userMessage]);
 
+  try {
     // Save user message to backend
-    await saveMessage(userMessage);
+    await saveMessage(userMessage); // Ensure you're sending proper JSON
 
     // Get AI response
-    try {
-      final aiMessage = await _geminiService.sendMessage(
-        message: message,
-        userId: userId,
-        subscriptions: subscriptions,
-      );
+    final aiMessage = await _geminiService.sendMessage(
+      message: message,
+      userId: userId,
+      subscriptions: subscriptions,
+    );
 
-      // Add AI message to state
-      state = state.copyWith(messages: [...state.messages, aiMessage]);
+    // Ensure AI message has proper metadata with userId
+    final aiMessageWithMetadata = aiMessage.copyWith(
+      metadata: {...?aiMessage.metadata, 'userId': userId},
+    );
 
-      // Save AI message to backend
-      await saveMessage(aiMessage);
+    // Add AI message to state
+    state = state.copyWith(messages: [...state.messages, aiMessageWithMetadata]);
 
-      // Handle any backend actions from the AI response
-      if (aiMessage.metadata != null) {
-        final apiCall = aiMessage.metadata!['apiCall'] as Map<String, dynamic>?;
-        if (apiCall != null) {
-          await _handleBackendAction(apiCall);
-        }
+    // Save AI message to backend
+    await saveMessage(aiMessageWithMetadata);
+
+    // Handle any backend actions from the AI response
+    if (aiMessageWithMetadata.metadata != null) {
+      final apiCall = aiMessageWithMetadata.metadata!['apiCall'] as Map<String, dynamic>?;
+      if (apiCall != null) {
+        await _handleBackendAction(apiCall);
       }
-    } catch (e) {
-      state = state.copyWith(error: 'Error sending message: $e');
     }
+  } catch (e) {
+    state = state.copyWith(error: 'Error sending message: $e');
+    // Consider adding retry logic or more specific error handling
   }
+}
 
   Future<void> _handleBackendAction(Map<String, dynamic> apiCall) async {
     try {
-      final endpoint = apiCall['endpoint'] as String;
-      final method = apiCall['method'] as String;
+      final endpoint = apiCall['endpoint'] as String? ?? '';
+      final method = apiCall['method'] as String? ?? '';
       final body = apiCall['body'];
+
+      debugPrint('=== API Call Debug ===');
+      debugPrint('Method: $method');
+      debugPrint('Endpoint: $endpoint');
+      debugPrint('Body: ${body ?? 'No body'}');
+      debugPrint('=======================');
+
+      if (endpoint.isEmpty || method.isEmpty) {
+        debugPrint('Invalid API call metadata');
+        return;
+      }
 
       switch (method) {
         case 'POST':
-          await _apiService.post(endpoint, data: body);
+          await _apiService.post(endpoint, data: body ?? {});
           break;
         case 'PUT':
-          await _apiService.put(endpoint, data: body);
+          await _apiService.put(endpoint, data: body ?? {});
           break;
         case 'GET':
           await _apiService.get(endpoint);
@@ -162,7 +186,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
           throw Exception('Unsupported HTTP method: $method');
       }
     } catch (e) {
-      debugPrint('Error handling backend action: $e');
+      debugPrint('Error executing API call: $e');
     }
   }
 }
