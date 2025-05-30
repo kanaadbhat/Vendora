@@ -24,7 +24,7 @@ app.use('/api/subscriptionDelivery',subscriptionDeliveries);
 app.use('/api/chat', chatRouter);
 
 import "./utils/cron.js";
-app.listen(process.env.PORT , () => {
+app.listen(process.env.PORT , '0.0.0.0', () => {
     connectDB();
     console.log(`Server running on port ${process.env.PORT}`);
 })

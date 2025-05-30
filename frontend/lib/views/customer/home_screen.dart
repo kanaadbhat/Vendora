@@ -9,7 +9,8 @@ import 'subscription_screen.dart';
 import 'chat_screen.dart';
 import '../auth/login_screen.dart';
 import '../../models/subscription_model.dart' as ChatSubscription;
-//import '../../models/subscription_model.dart' as HomeSubscription;
+import '../../models/subscriptionDeliveries.model.dart';
+import '../../services/api_service.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -20,10 +21,14 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _selectedIndex = 0;
+  late Future<List<SubscriptionDelivery>> _deliveriesFuture;
 
   @override
   void initState() {
     super.initState();
+    // Initialize deliveries future
+    _deliveriesFuture = Future.value([]);
+
     // Check authentication state
     Future.microtask(() {
       final authState = ref.watch(authProvider);
@@ -41,14 +46,50 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     });
   }
 
-  void _onItemTapped(int index) {
+  Future<List<SubscriptionDelivery>> _fetchDeliveries(
+    List<ChatSubscription.Subscription> subscriptions,
+  ) async {
+    final api = ApiService();
+    final List<SubscriptionDelivery> deliveries = [];
+
+    for (final sub in subscriptions) {
+      // First get the delivery config
+      final configResp = await api.get(
+        '/subscriptionDelivery/config/${sub.id}',
+      );
+      if (configResp.statusCode == 200 && configResp.data['data'] != null) {
+        final configData = configResp.data['data'];
+        final deliveryConfig = DeliveryConfig(
+          days: List<String>.from(configData['days'] ?? []),
+          quantity: configData['quantity'] ?? 0,
+        );
+
+        // Then get the delivery logs
+        final logsResp = await api.get('/subscriptionDelivery/logs/${sub.id}');
+        if (logsResp.statusCode == 200 && logsResp.data['data'] != null) {
+          deliveries.add(
+            SubscriptionDelivery(
+              subscriptionId: sub.id,
+              deliveryConfig: deliveryConfig,
+              deliveryLogs:
+                  (logsResp.data['data'] as List)
+                      .map((log) => DeliveryLog.fromJson(log))
+                      .toList(),
+            ),
+          );
+        }
+      }
+    }
+    return deliveries;
+  }
+
+  void _onItemTapped(int index) async {
     setState(() {
       _selectedIndex = index;
     });
 
     switch (index) {
       case 0:
-        // Already on home
         break;
       case 1:
         Navigator.push(
@@ -62,18 +103,16 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
         );
         break;
-      // In the navigation case 3 (chat screen):
       case 3:
         final user = ref.read(authProvider).value;
         final subscriptions = ref.read(subscriptionProvider).value;
         if (user != null && subscriptions != null && subscriptions.isNotEmpty) {
-          // Convert to ChatSubscription with ALL required parameters
           final chatSubscriptions =
               subscriptions
                   .map(
                     (sub) => ChatSubscription.Subscription(
                       id: sub.id,
-                      subscribedBy: user.id, // Using current user's ID
+                      subscribedBy: user.id,
                       productId: sub.productId,
                       name: sub.name,
                       description: sub.description,
@@ -86,16 +125,21 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                   )
                   .toList();
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => ChatScreen(
-                    userId: user.id,
-                    subscriptions: chatSubscriptions,
-                  ),
-            ),
-          );
+          final deliveries = await _fetchDeliveries(chatSubscriptions);
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => ChatScreen(
+                      userId: user.id,
+                      subscriptions: chatSubscriptions,
+                      subscriptionDeliveries: deliveries,
+                    ),
+              ),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -290,7 +334,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                   context,
                                   'Chat with AI',
                                   Icons.chat,
-                                  () {
+                                  () async {
                                     final user = ref.read(authProvider).value;
                                     final subscriptions =
                                         ref.read(subscriptionProvider).value;
@@ -318,17 +362,25 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                               )
                                               .toList();
 
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder:
-                                              (context) => ChatScreen(
-                                                userId: user.id,
-                                                subscriptions:
-                                                    chatSubscriptions,
-                                              ),
-                                        ),
+                                      final deliveries = await _fetchDeliveries(
+                                        chatSubscriptions,
                                       );
+
+                                      if (mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (context) => ChatScreen(
+                                                  userId: user.id,
+                                                  subscriptions:
+                                                      chatSubscriptions,
+                                                  subscriptionDeliveries:
+                                                      deliveries,
+                                                ),
+                                          ),
+                                        );
+                                      }
                                     } else {
                                       ScaffoldMessenger.of(
                                         context,
@@ -355,7 +407,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stack) {
               if (error.toString().contains('Unauthorized')) {
-                // Redirect to login screen if unauthorized
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   Navigator.pushReplacement(
                     context,

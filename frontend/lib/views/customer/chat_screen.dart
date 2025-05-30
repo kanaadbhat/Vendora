@@ -3,15 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
 import '../../models/subscription_model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
+import '../../models/subscriptionDeliveries.model.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String userId;
   final List<Subscription> subscriptions;
+  final List<SubscriptionDelivery> subscriptionDeliveries;
 
   const ChatScreen({
     super.key,
     required this.userId,
     required this.subscriptions,
+    required this.subscriptionDeliveries,
   });
 
   @override
@@ -39,15 +42,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(ChatScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Scroll to bottom when messages change
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   void _sendMessage() {
@@ -60,6 +68,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           message: message,
           userId: widget.userId,
           subscriptions: widget.subscriptions,
+          subscriptionDeliveries: widget.subscriptionDeliveries,
         );
 
     _messageController.clear();
@@ -69,6 +78,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatViewModelProvider);
+
+    // Scroll to bottom when messages change
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
     return Scaffold(
       appBar: AppBar(
@@ -86,6 +98,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       itemCount: chatState.messages.length,
                       itemBuilder: (context, index) {
                         final msg = chatState.messages[index];
+                        if (msg.type == MessageType.system &&
+                            msg.metadata?['isLoading'] == true) {
+                          return _LoadingBubble();
+                        }
                         return _ChatBubble(message: msg);
                       },
                     ),
@@ -146,6 +162,38 @@ class _ChatBubble extends StatelessWidget {
         child: Text(
           message.content,
           style: TextStyle(color: isUser ? Colors.white : Colors.black87),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingBubble extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text('Processing...', style: TextStyle(color: Colors.grey[600])),
+          ],
         ),
       ),
     );

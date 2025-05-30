@@ -6,7 +6,7 @@ import 'dart:async';
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "http://localhost:8000/api",
+      baseUrl: "http://192.168.1.5:8000/api",
       connectTimeout: Duration(seconds: 10),
       receiveTimeout: Duration(seconds: 10),
       headers: {"Content-Type": "application/json"},
