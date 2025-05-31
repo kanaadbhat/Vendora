@@ -2,11 +2,13 @@ import 'package:dio/dio.dart';
 import 'auth_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: "http://192.168.1.5:8000/api",
+      baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000',
       connectTimeout: Duration(seconds: 10),
       receiveTimeout: Duration(seconds: 10),
       headers: {"Content-Type": "application/json"},
