@@ -14,7 +14,7 @@ class GeminiService {
 
   GeminiService(this._api)
     : _model = GenerativeModel(
-        model: 'gemini-1.5-pro',
+        model: 'gemini-2.0-flash',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       ) {
     _chat = _model.startChat();
