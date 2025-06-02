@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
+import '../../viewmodels/theme_viewmodel.dart'; // Add this import
 import '../../widgets/app_drawer.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'explore_vendors_screen.dart';
@@ -155,6 +156,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   Widget build(BuildContext context) {
     final subscriptionsAsync = ref.watch(subscriptionProvider);
     final authState = ref.watch(authProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return authState.when(
       data: (user) {
@@ -168,6 +170,16 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           appBar: AppBar(
             title: const Text('Customer Dashboard'),
             actions: [
+              // Theme toggle button
+              IconButton(
+                icon: Icon(
+                  isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                ),
+                onPressed: () {
+                  ref.read(themeProvider.notifier).toggleTheme();
+                },
+                tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              ),
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () async {
@@ -198,6 +210,45 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Welcome section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome, ${user.name}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Manage your subscriptions and explore vendors',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
                     // Quick Stats
                     Card(
                       child: Padding(
@@ -241,37 +292,77 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Recent Activity',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Recent Activity',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (subscriptions.isNotEmpty)
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const SubscriptionScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('View All'),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             if (subscriptions.isEmpty)
-                              const Center(child: Text('No recent activity'))
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Column(
+                                    children: [
+                                      Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                                      SizedBox(height: 16),
+                                      Text(
+                                        'No subscriptions yet',
+                                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Explore vendors to find products to subscribe to',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
                             else
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: subscriptions.length,
+                                itemCount: subscriptions.length > 3 ? 3 : subscriptions.length,
                                 itemBuilder: (context, index) {
                                   final subscription = subscriptions[index];
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundImage: NetworkImage(
-                                        subscription.image,
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                          subscription.image,
+                                        ),
                                       ),
-                                    ),
-                                    title: Text(subscription.name),
-                                    subtitle: Text(
-                                      'Vendor: ${subscription.vendorName}\nPrice: \$${subscription.price.toStringAsFixed(2)}',
-                                    ),
-                                    trailing: Text(
-                                      subscription.createdAt.toString().split(
-                                        ' ',
-                                      )[0],
+                                      title: Text(subscription.name),
+                                      subtitle: Text(
+                                        'Vendor: ${subscription.vendorName}\nPrice: \$${subscription.price.toStringAsFixed(2)}',
+                                      ),
+                                      trailing: Text(
+                                        subscription.createdAt.toString().split(
+                                          ' ',
+                                        )[0],
+                                      ),
                                     ),
                                   );
                                 },
@@ -436,21 +527,41 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final backgroundColor = isDarkMode 
+        ? Theme.of(context).colorScheme.surface 
+        : primaryColor.withOpacity(0.1);
+    final textColor = isDarkMode 
+        ? Theme.of(context).colorScheme.onSurface 
+        : primaryColor;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icon, size: 32, color: Colors.blue),
+          Icon(icon, size: 32, color: primaryColor),
           const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontSize: 14, color: Colors.blue)),
+          Text(title, style: TextStyle(fontSize: 14, color: textColor)),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20, 
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ],
       ),
@@ -463,25 +574,36 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     IconData icon,
     VoidCallback onTap,
   ) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: Colors.blue),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Colors.blue),
-            ),
-          ],
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final backgroundColor = isDarkMode 
+        ? Theme.of(context).colorScheme.surface 
+        : Colors.white;
+    final textColor = primaryColor;
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 32, color: primaryColor),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     );

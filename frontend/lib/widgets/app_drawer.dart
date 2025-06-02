@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../views/auth/login_screen.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -63,13 +64,22 @@ class AppDrawer extends ConsumerWidget {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            onTap: () {
-              ref.read(authProvider.notifier).logout();
-              Navigator.pop(context);
-            },
-          ),
+  leading: const Icon(Icons.logout),
+  title: const Text('Logout'),
+  onTap: () async {
+    await ref.read(authProvider.notifier).logout();
+
+    if (context.mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        ),
+      );
+    }
+  },
+),
+
         ],
       ),
     );

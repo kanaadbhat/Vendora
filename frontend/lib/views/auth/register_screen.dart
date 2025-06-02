@@ -37,9 +37,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: const Text('Passwords do not match'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -68,15 +68,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      appBar: AppBar(title: const Text('Register')),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('Register'),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        elevation: 0,
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Image.asset(
+                  'assets/2.png',
+                  height: 120,
+                  fit: BoxFit.contain,
+                ),
+              ),
               Card(
-                margin: const EdgeInsets.all(20),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Form(
@@ -86,8 +99,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       children: [
                         TextFormField(
                           controller: _nameController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Full Name",
+                            prefixIcon: Icon(
+                              Icons.person_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -96,10 +113,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Email Address",
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           autocorrect: false,
@@ -113,10 +135,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _phoneController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Phone Number",
+                            prefixIcon: Icon(
+                              Icons.phone_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           keyboardType: TextInputType.phone,
                           validator: (value) {
@@ -126,10 +153,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Password",
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           obscureText: true,
                           validator: (value) {
@@ -139,10 +171,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 12),
                         TextFormField(
                           controller: _confirmPasswordController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Confirm Password",
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           obscureText: true,
                           validator: (value) {
@@ -155,7 +192,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
                           value: _selectedRole,
-                          decoration: const InputDecoration(labelText: "Role"),
+                          decoration: InputDecoration(
+                            labelText: "Role",
+                            prefixIcon: Icon(
+                              Icons.badge_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
                           items: const [
                             DropdownMenuItem(
                               value: 'customer',
@@ -172,11 +215,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             });
                           },
                         ),
-                        if (_selectedRole == 'vendor') ...[
+                        if (_selectedRole == 'vendor') ...[  
+                          const SizedBox(height: 12),                        
                           TextFormField(
                             controller: _businessNameController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: "Business Name",
+                              prefixIcon: Icon(
+                                Icons.business_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -185,10 +233,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 12),
                           TextFormField(
                             controller: _businessDescriptionController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: "Business Description",
+                              prefixIcon: Icon(
+                                Icons.description_outlined,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                             ),
                             maxLines: 3,
                             validator: (value) {
@@ -199,20 +252,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             },
                           ),
                         ],
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         if (authState.isLoading)
-                          const CircularProgressIndicator()
+                          CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.primary,
+                          )
                         else
-                          ElevatedButton(
-                            onPressed: _submit,
-                            child: const Text('Register'),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Text(
+                                  'REGISTER',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         if (authState.hasError)
                           Padding(
                             padding: const EdgeInsets.only(top: 16),
                             child: Text(
                               authState.error.toString(),
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
                           ),
                       ],
@@ -220,6 +293,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

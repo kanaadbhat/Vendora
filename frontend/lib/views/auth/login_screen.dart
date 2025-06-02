@@ -32,17 +32,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      appBar: AppBar(title: const Text('Login')),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+        elevation: 0,
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Container(
+                width: double.infinity,
+                height: MediaQuery.of(context).size.height * 0.4,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: Image.asset(
+                  'assets/1.png',
+                  fit: BoxFit.fitHeight,
+                ),
+              ),
               Card(
-                margin: const EdgeInsets.all(20),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Form(
@@ -52,8 +67,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         TextFormField(
                           controller: _emailController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Email Address",
+                            prefixIcon: Icon(
+                              Icons.email_outlined,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           keyboardType: TextInputType.emailAddress,
                           autocorrect: false,
@@ -67,10 +86,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             return null;
                           },
                         ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: "Password",
+                            prefixIcon: Icon(
+                              Icons.lock_outline,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           obscureText: true,
                           validator: (value) {
@@ -80,20 +104,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                         if (authState.isLoading)
-                          const CircularProgressIndicator()
+                          CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.primary,
+                          )
                         else
-                          ElevatedButton(
-                            onPressed: _submit,
-                            child: const Text('Login'),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _submit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Text(
+                                  'LOGIN',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         if (authState.hasError)
                           Padding(
                             padding: const EdgeInsets.only(top: 16),
                             child: Text(
                               authState.error.toString(),
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
                           ),
                       ],
