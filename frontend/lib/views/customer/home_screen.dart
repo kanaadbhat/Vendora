@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
-import '../../viewmodels/theme_viewmodel.dart'; // Add this import
+import '../../viewmodels/theme_viewmodel.dart'; 
 import '../../widgets/app_drawer.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'explore_vendors_screen.dart';
@@ -183,14 +183,23 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () async {
+                  debugPrint("[DEBUG] CustomerHomeScreen - Logout button pressed");
                   await ref.read(authProvider.notifier).logout();
+                  debugPrint("[DEBUG] CustomerHomeScreen - Logout completed, checking if mounted");
+                  
+                  // Add a small delay to ensure state updates are processed
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
                   if (mounted) {
+                    debugPrint("[DEBUG] CustomerHomeScreen - Widget is mounted, navigating to LoginScreen");
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const LoginScreen(),
                       ),
                     );
+                  } else {
+                    debugPrint("[DEBUG] CustomerHomeScreen - Widget is not mounted, navigation skipped");
                   }
                 },
               ),

@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 import 'role_viewmodel.dart';
+import 'package:flutter/material.dart';
 
 final authProvider = StateNotifierProvider<AuthViewModel, AsyncValue<User?>>((
   ref,
@@ -59,11 +60,26 @@ class AuthViewModel extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> logout() async {
+    debugPrint("[DEBUG] AuthViewModel.logout() - Starting logout process");
     try {
+      debugPrint("[DEBUG] AuthViewModel.logout() - Current auth state before logout: ${state.toString()}");
+      debugPrint("[DEBUG] AuthViewModel.logout() - Current role state before logout: ${ref.read(roleProvider).toString()}");
+      
       await _apiService.logout();
+      
+      // Set state to null first to ensure UI updates
       state = const AsyncValue.data(null);
+      debugPrint("[DEBUG] AuthViewModel.logout() - Auth state set to null");
+      
+      // Clear role after state is updated
       ref.read(roleProvider.notifier).clearRole();
+      debugPrint("[DEBUG] AuthViewModel.logout() - Role cleared");
+      
+      // Verify state after logout
+      debugPrint("[DEBUG] AuthViewModel.logout() - Auth state after logout: ${state.toString()}");
+      debugPrint("[DEBUG] AuthViewModel.logout() - Role state after logout: ${ref.read(roleProvider).toString()}");
     } catch (e, stackTrace) {
+      debugPrint("[DEBUG] AuthViewModel.logout() - Error during logout: $e");
       state = AsyncValue.error(e, stackTrace);
     }
   }

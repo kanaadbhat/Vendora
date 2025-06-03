@@ -68,9 +68,13 @@ class ApiService {
   }
 
   Future<void> _initializeToken() async {
+    debugPrint("[DEBUG] ApiService._initializeToken() - Initializing token");
     String? token = await _authService.getToken();
     if (token != null) {
+      debugPrint("[DEBUG] ApiService._initializeToken() - Setting Authorization header with token");
       _dio.options.headers["Authorization"] = "Bearer $token";
+    } else {
+      debugPrint("[DEBUG] ApiService._initializeToken() - No token found, Authorization header not set");
     }
   }
 
@@ -83,14 +87,20 @@ class ApiService {
   }
 
   Future<void> logout() async {
+    debugPrint("[DEBUG] ApiService.logout() - Starting logout process");
     try {
-      await _dio.post('/user/logout');
+      debugPrint("[DEBUG] ApiService.logout() - Sending logout request to server");
+      final response = await _dio.post('/user/logout');
+      debugPrint("[DEBUG] ApiService.logout() - Server response: ${response.statusCode}");
     } catch (e) {
-      debugPrint("Logout error: $e");
+      debugPrint("[DEBUG] ApiService.logout() - Error during API call: $e");
     } finally {
+      debugPrint("[DEBUG] ApiService.logout() - Clearing local storage and headers");
       await _authService.logout();
       _dio.options.headers.remove("Authorization");
+      debugPrint("[DEBUG] ApiService.logout() - Authorization header removed");
       _refreshController.add(false);
+      debugPrint("[DEBUG] ApiService.logout() - Logout process completed");
     }
   }
 
@@ -106,20 +116,30 @@ class ApiService {
   }
 
   Future<Response> post(String endpoint, {dynamic data}) async {
+    debugPrint("[DEBUG] ApiService.post() - Endpoint: $endpoint");
     try {
       Response response = await _dio.post(endpoint, data: data);
+      debugPrint("[DEBUG] ApiService.post() - Response status: ${response.statusCode}");
 
       // Update tokens for login and register responses
       if ((endpoint == "/user/login" || endpoint == "/user/register") &&
           response.data["accessToken"] != null) {
+        debugPrint("[DEBUG] ApiService.post() - Received new access token from ${endpoint}");
         await _updateToken(response.data["accessToken"]);
         if (response.data["refreshToken"] != null) {
+          debugPrint("[DEBUG] ApiService.post() - Received new refresh token from ${endpoint}");
           await _authService.saveRefreshToken(response.data["refreshToken"]);
         }
+        
+        // Verify tokens were saved
+        final token = await _authService.getToken();
+        final refreshToken = await _authService.getRefreshToken();
+        debugPrint("[DEBUG] ApiService.post() - Token verification: access token ${token != null ? 'exists' : 'null'}, refresh token ${refreshToken != null ? 'exists' : 'null'}");
       }
 
       return response;
     } on DioException catch (e) {
+      debugPrint("[DEBUG] ApiService.post() - DioException: ${e.message}");
       return _handleError(e);
     }
   }

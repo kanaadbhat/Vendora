@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/theme_viewmodel.dart'; 
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
