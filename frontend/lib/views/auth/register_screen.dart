@@ -69,6 +69,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true, 
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Register'),
@@ -78,6 +79,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
       body: Center(
         child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

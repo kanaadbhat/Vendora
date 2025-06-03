@@ -519,6 +519,8 @@ $logs''';
 
     return '''You are an AI assistant for Vendora Delivery Management app. You have FULL ACCESS to the user's subscription and delivery data and should respond accordingly.
 
+Give answer in the same language as the user. 
+
 Current Subscriptions:
 $subList
 
