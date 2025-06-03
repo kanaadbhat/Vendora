@@ -117,6 +117,20 @@ export const getDeliveryLogs = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, doc.deliveryLogs, "Logs fetched successfully"));
 });
 
+
+
+//for passing subscriptionDeliveries to chatscreen
+export const getSubscriptionDeliveryById = asyncHandler(async (req, res) => {
+  const { subscriptionId } = req.params;
+
+  const doc = await SubscriptionDeliveries.findOne({ subscriptionId });
+  if (!doc) throw new ApiError(404, "Subscription delivery not found");
+
+  return res.status(200).json(
+    new ApiResponse(200, doc, "Subscription delivery fetched successfully")
+  );
+});
+
 // Update a single log (cancel or modify quantity)
 export const updateSingleDeliveryLog = asyncHandler(async (req, res) => {
   const { subscriptionId } = req.params;

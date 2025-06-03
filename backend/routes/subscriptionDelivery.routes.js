@@ -4,7 +4,8 @@ import {
   saveOrUpdateDeliveryConfig,
   regenerateDeliveryLogs,
   generateMonthlyDeliveryLogs,
-  updateSingleDeliveryLog
+  updateSingleDeliveryLog,
+  getSubscriptionDeliveryById
 } from "../controllers/subscriptionDelivery.controller.js";
 
 import protect from "../middleware/auth.middleware.js";
@@ -29,6 +30,10 @@ router.post("/logs/:subscriptionId/regenerate", regenerateDeliveryLogs);
 
 //update single delivery log 
 router.post("/logs/override/:subscriptionId",updateSingleDeliveryLog);
+
+// get subsription delivery by id
+router.get('/full/:subscriptionId', getSubscriptionDeliveryById);
+
 
 // Cron: Generate monthly delivery logs for all active subscriptions (system use)
 //need to add security for this

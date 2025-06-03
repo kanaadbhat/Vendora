@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
-import '../../viewmodels/theme_viewmodel.dart'; 
+import '../../viewmodels/theme_viewmodel.dart';
 import '../../widgets/app_drawer.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import 'explore_vendors_screen.dart';
@@ -54,33 +54,31 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     final List<SubscriptionDelivery> deliveries = [];
 
     for (final sub in subscriptions) {
-      // First get the delivery config
-      final configResp = await api.get(
-        '/subscriptionDelivery/config/${sub.id}',
-      );
-      if (configResp.statusCode == 200 && configResp.data['data'] != null) {
-        final configData = configResp.data['data'];
+      final resp = await api.get('/subscriptionDelivery/full/${sub.id}');
+
+      if (resp.statusCode == 200 && resp.data['data'] != null) {
+        final data = resp.data['data'];
+
         final deliveryConfig = DeliveryConfig(
-          days: List<String>.from(configData['days'] ?? []),
-          quantity: configData['quantity'] ?? 0,
+          days: List<String>.from(data['deliveryConfig']['days'] ?? []),
+          quantity: data['deliveryConfig']['quantity'] ?? 0,
         );
 
-        // Then get the delivery logs
-        final logsResp = await api.get('/subscriptionDelivery/logs/${sub.id}');
-        if (logsResp.statusCode == 200 && logsResp.data['data'] != null) {
-          deliveries.add(
-            SubscriptionDelivery(
-              subscriptionId: sub.id,
-              deliveryConfig: deliveryConfig,
-              deliveryLogs:
-                  (logsResp.data['data'] as List)
-                      .map((log) => DeliveryLog.fromJson(log))
-                      .toList(),
-            ),
-          );
-        }
+        final deliveryLogs =
+            (data['deliveryLogs'] as List)
+                .map((log) => DeliveryLog.fromJson(log))
+                .toList();
+
+        deliveries.add(
+          SubscriptionDelivery(
+            subscriptionId: sub.id,
+            deliveryConfig: deliveryConfig,
+            deliveryLogs: deliveryLogs,
+          ),
+        );
       }
     }
+
     return deliveries;
   }
 
@@ -172,26 +170,31 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
             actions: [
               // Theme toggle button
               IconButton(
-                icon: Icon(
-                  isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                ),
+                icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
                 onPressed: () {
                   ref.read(themeProvider.notifier).toggleTheme();
                 },
-                tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                tooltip:
+                    isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
               ),
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () async {
-                  debugPrint("[DEBUG] CustomerHomeScreen - Logout button pressed");
+                  debugPrint(
+                    "[DEBUG] CustomerHomeScreen - Logout button pressed",
+                  );
                   await ref.read(authProvider.notifier).logout();
-                  debugPrint("[DEBUG] CustomerHomeScreen - Logout completed, checking if mounted");
-                  
+                  debugPrint(
+                    "[DEBUG] CustomerHomeScreen - Logout completed, checking if mounted",
+                  );
+
                   // Add a small delay to ensure state updates are processed
                   await Future.delayed(const Duration(milliseconds: 300));
-                  
+
                   if (mounted) {
-                    debugPrint("[DEBUG] CustomerHomeScreen - Widget is mounted, navigating to LoginScreen");
+                    debugPrint(
+                      "[DEBUG] CustomerHomeScreen - Widget is mounted, navigating to LoginScreen",
+                    );
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -199,7 +202,9 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                       ),
                     );
                   } else {
-                    debugPrint("[DEBUG] CustomerHomeScreen - Widget is not mounted, navigation skipped");
+                    debugPrint(
+                      "[DEBUG] CustomerHomeScreen - Widget is not mounted, navigation skipped",
+                    );
                   }
                 },
               ),
@@ -227,7 +232,9 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                         gradient: LinearGradient(
                           colors: [
                             Theme.of(context).colorScheme.primary,
-                            Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                            Theme.of(
+                              context,
+                            ).colorScheme.primary.withOpacity(0.7),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -257,7 +264,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Quick Stats
                     Card(
                       child: Padding(
@@ -317,7 +324,9 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const SubscriptionScreen(),
+                                          builder:
+                                              (context) =>
+                                                  const SubscriptionScreen(),
                                         ),
                                       );
                                     },
@@ -332,11 +341,18 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                   padding: EdgeInsets.all(16.0),
                                   child: Column(
                                     children: [
-                                      Icon(Icons.info_outline, size: 48, color: Colors.grey),
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 48,
+                                        color: Colors.grey,
+                                      ),
                                       SizedBox(height: 16),
                                       Text(
                                         'No subscriptions yet',
-                                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                        ),
                                       ),
                                       SizedBox(height: 8),
                                       Text(
@@ -352,7 +368,10 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: subscriptions.length > 3 ? 3 : subscriptions.length,
+                                itemCount:
+                                    subscriptions.length > 3
+                                        ? 3
+                                        : subscriptions.length,
                                 itemBuilder: (context, index) {
                                   final subscription = subscriptions[index];
                                   return Card(
@@ -538,12 +557,12 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   Widget _buildStatCard(String title, String value, IconData icon) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = isDarkMode 
-        ? Theme.of(context).colorScheme.surface 
-        : primaryColor.withOpacity(0.1);
-    final textColor = isDarkMode 
-        ? Theme.of(context).colorScheme.onSurface 
-        : primaryColor;
+    final backgroundColor =
+        isDarkMode
+            ? Theme.of(context).colorScheme.surface
+            : primaryColor.withOpacity(0.1);
+    final textColor =
+        isDarkMode ? Theme.of(context).colorScheme.onSurface : primaryColor;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -567,7 +586,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           Text(
             value,
             style: TextStyle(
-              fontSize: 20, 
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -585,9 +604,8 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final backgroundColor = isDarkMode 
-        ? Theme.of(context).colorScheme.surface 
-        : Colors.white;
+    final backgroundColor =
+        isDarkMode ? Theme.of(context).colorScheme.surface : Colors.white;
     final textColor = primaryColor;
 
     return Card(
@@ -598,9 +616,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -609,7 +625,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: textColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
