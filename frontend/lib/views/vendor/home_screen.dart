@@ -5,7 +5,6 @@ import '../../widgets/bottom_nav_bar.dart';
 import 'product_list_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../auth/login_screen.dart';
-import '../../viewmodels/theme_viewmodel.dart';
 import 'chat_screen.dart';
 import 'dashboard_screen.dart';
 import '../../viewmodels/product_viewmodel.dart';
@@ -42,7 +41,6 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final authState = ref.watch(authProvider);
     
     return authState.when(
@@ -62,42 +60,8 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Vendor Dashboard'),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                ),
-                onPressed: () {
-                  ref.read(themeProvider.notifier).toggleTheme();
-                },
-                tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () async {
-                  debugPrint("[DEBUG] VendorHomeScreen - Logout button pressed");
-                  await ref.read(authProvider.notifier).logout();
-                  debugPrint("[DEBUG] VendorHomeScreen - Logout completed, checking if mounted");
-                  
-                  // Add a small delay to ensure state updates are processed
-                  await Future.delayed(const Duration(milliseconds: 300));
-                  
-                  if (mounted) {
-                    debugPrint("[DEBUG] VendorHomeScreen - Widget is mounted, navigating to LoginScreen");
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                    );
-                  } else {
-                    debugPrint("[DEBUG] VendorHomeScreen - Widget is not mounted, navigation skipped");
-                  }
-                },
-              ),
-            ],
           ),
-          drawer: const AppDrawer(),
+          drawer: const AppDrawer(role: 'vendor'),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,
