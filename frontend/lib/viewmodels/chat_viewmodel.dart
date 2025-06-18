@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/chat_message.model.dart';
 import '../models/subscription_model.dart';
 import '../models/subscriptionDeliveries.model.dart';
-import '../services/gemini_service.dart';
+import '../services/user_gemini_service.dart';
 import '../services/api_service.dart';
 
 class ChatState {

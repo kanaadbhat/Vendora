@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addProduct, getProducts, deleteProduct } from '../controllers/vendorProduct.controller.js';
+import { addProduct, getProducts, deleteProduct,getProductsWithSubscribers } from '../controllers/vendorProduct.controller.js';
 import protect from "../middleware/auth.middleware.js";
 import { isVendor } from "../middleware/role.middleware.js";
 
@@ -12,5 +12,7 @@ router.use(protect, isVendor);
 router.route('/add').post(addProduct);
 router.route('/all').get(getProducts);
 router.route('/delete/:id').delete(deleteProduct);
+router.route('/details').get(getProductsWithSubscribers);
+
 
 export default router;

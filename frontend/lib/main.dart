@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 
 import 'views/auth/auth_screen.dart';
 import 'views/customer/home_screen.dart';
@@ -12,7 +13,7 @@ import 'widgets/loading_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env");
+ await dotenv.load(fileName: kReleaseMode ? '.env' : '.env.local');
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -32,9 +33,7 @@ class MyApp extends ConsumerWidget {
       ),
       useMaterial3: true,
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.grey.shade100,
       ),
@@ -48,9 +47,7 @@ class MyApp extends ConsumerWidget {
       ),
       cardTheme: CardTheme(
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 
@@ -61,9 +58,7 @@ class MyApp extends ConsumerWidget {
       ),
       useMaterial3: true,
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.grey.shade800,
       ),
@@ -77,9 +72,7 @@ class MyApp extends ConsumerWidget {
       ),
       cardTheme: CardTheme(
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 
@@ -102,16 +95,21 @@ class MyApp extends ConsumerWidget {
               } else {
                 // Use the same theme for AuthScreen based on system brightness:
                 return Theme(
-                  data: brightness == Brightness.dark ? darkThemeData : lightThemeData,
+                  data:
+                      brightness == Brightness.dark
+                          ? darkThemeData
+                          : lightThemeData,
                   child: const AuthScreen(),
                 );
               }
             },
             loading: () => const LoadingWidget(message: 'Loading...'),
-            error: (error, _) => CustomErrorWidget(
-              message: error.toString(),
-              onRetry: () => ref.read(roleProvider.notifier).fetchUserRole(),
-            ),
+            error:
+                (error, _) => CustomErrorWidget(
+                  message: error.toString(),
+                  onRetry:
+                      () => ref.read(roleProvider.notifier).fetchUserRole(),
+                ),
           );
         },
       ),

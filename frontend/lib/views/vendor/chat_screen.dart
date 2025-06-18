@@ -1,29 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
-import '../../models/subscription_model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
-import '../../models/subscriptionDeliveries.model.dart';
 import '../../widgets/chatbubble.dart';
 import '../../widgets/loadingbubble.dart';
 
-class ChatScreen extends ConsumerStatefulWidget {
+class VendorChatScreen extends ConsumerStatefulWidget {
   final String userId;
-  final List<Subscription> subscriptions;
-  final List<SubscriptionDelivery> subscriptionDeliveries;
 
-  const ChatScreen({
+  const VendorChatScreen({
     super.key,
     required this.userId,
-    required this.subscriptions,
-    required this.subscriptionDeliveries,
   });
 
   @override
-  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<VendorChatScreen> createState() => _VendorChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -54,7 +48,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   @override
-  void didUpdateWidget(ChatScreen oldWidget) {
+  void didUpdateWidget(VendorChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Scroll to bottom when messages change
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -69,8 +63,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .sendMessage(
           message: message,
           userId: widget.userId,
-          subscriptions: widget.subscriptions,
-          subscriptionDeliveries: widget.subscriptionDeliveries,
+          subscriptions: [], // Vendors don't have subscriptions
+          subscriptionDeliveries: [], // Vendors don't have subscription deliveries
         );
 
     _messageController.clear();
@@ -86,7 +80,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Assistant'),
+        title: const Text('Vendor Assistant'),
         centerTitle: true,
       ),
       body: Column(
@@ -143,3 +137,5 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+

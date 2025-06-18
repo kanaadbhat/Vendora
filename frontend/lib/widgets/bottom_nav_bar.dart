@@ -23,8 +23,8 @@ class BottomNavBar extends StatelessWidget {
                 label: 'Products',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
+                icon: Icon(Icons.chat),
+                label: 'Chat',
               ),
             ]
             : const [

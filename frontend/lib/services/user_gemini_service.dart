@@ -9,7 +9,7 @@ import '../models/subscription_model.dart';
 import '../models/subscriptionDeliveries.model.dart';
 import '../services/api_service.dart';
 
-import 'utils/prompt_builder.dart';
+import 'utils/user_prompt_builder.dart';
 import 'utils/message_utils.dart';
 
 class GeminiService {

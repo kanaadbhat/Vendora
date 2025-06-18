@@ -129,6 +129,51 @@ const deleteProduct = asyncHandler(async (req, res) => {
     });
   });
   
+//GET VENDOR PRODUCTS WITH SUBSCRIBERS AND DELIVERY DETAILS
+const getProductsWithSubscribers = asyncHandler(async (req, res) => {
+  const vendorId = req.user._id;
 
+  if (!vendorId) {
+    return res.status(401).json({
+      message: "Unauthorized: User not found",
+      success: false,
+    });
+  }
 
-export {addProduct,getProducts, deleteProduct};
+  const products = await Product.find({ createdBy: vendorId });
+  
+  const productsWithSubscribers = [];
+  
+  for (const product of products) {
+    const subscriptions = await Subscriptions.find({ productId: product._id })
+      .populate({
+        path: 'subscribedBy',
+        select: 'name email phone' 
+      });
+    
+    const subscriptionsWithDeliveries = [];
+    
+    for (const subscription of subscriptions) {
+      const deliveryDetails = await SubscriptionDeliveries.findOne({ 
+        subscriptionId: subscription._id 
+      });
+      
+      subscriptionsWithDeliveries.push({
+        subscription,
+        deliveryDetails
+      });
+    }
+    
+    productsWithSubscribers.push({
+      product,
+      subscribers: subscriptionsWithDeliveries
+    });
+  }
+  
+  return res.status(200).json({
+    success: true,
+    productsWithSubscribers
+  });
+});
+
+export {addProduct, getProducts, deleteProduct, getProductsWithSubscribers};
