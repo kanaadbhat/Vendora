@@ -8,6 +8,7 @@ import '../auth/login_screen.dart';
 import '../../viewmodels/theme_viewmodel.dart';
 import 'chat_screen.dart';
 import 'dashboard_screen.dart';
+import '../../viewmodels/product_viewmodel.dart';
 
 class VendorHomeScreen extends ConsumerStatefulWidget {
   const VendorHomeScreen({super.key});
@@ -18,6 +19,26 @@ class VendorHomeScreen extends ConsumerStatefulWidget {
 
 class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   int _currentIndex = 0;
+
+@override
+  void initState() {
+    super.initState();
+    // Check authentication state
+    Future.microtask(() {
+      final authState = ref.watch(authProvider);
+      authState.whenData((user) {
+        if (user == null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+          return;
+        }
+        // Fetch subscriptions if authenticated
+        ref.read(productProvider.notifier).fetchProducts();
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/subscriptionDeliveries.model.dart';
 import '../services/api_service.dart';
 import 'package:flutter/foundation.dart';
+import '../models/subscription_model.dart' as ChatSubscription;
 
 final subscriptionDeliveryProvider = StateNotifierProvider<
   SubscriptionDeliveryViewModel,
@@ -118,6 +119,40 @@ try {
       debugPrint('Error updating delivery log: $e');
       state = AsyncValue.error(e, stackTrace);
     }
+  }
+
+ Future<List<SubscriptionDelivery>> fetchDeliveries(
+    List<ChatSubscription.Subscription> subscriptions,
+  ) async {
+    final List<SubscriptionDelivery> deliveries = [];
+
+    for (final sub in subscriptions) {
+      final resp = await _apiService.get('/subscriptionDelivery/full/${sub.id}');
+
+      if (resp.statusCode == 200 && resp.data['data'] != null) {
+        final data = resp.data['data'];
+
+        final deliveryConfig = DeliveryConfig(
+          days: List<String>.from(data['deliveryConfig']['days'] ?? []),
+          quantity: data['deliveryConfig']['quantity'] ?? 0,
+        );
+
+        final deliveryLogs =
+            (data['deliveryLogs'] as List)
+                .map((log) => DeliveryLog.fromJson(log))
+                .toList();
+
+        deliveries.add(
+          SubscriptionDelivery(
+            subscriptionId: sub.id,
+            deliveryConfig: deliveryConfig,
+            deliveryLogs: deliveryLogs,
+          ),
+        );
+      }
+    }
+
+    return deliveries;
   }
 
   //might not need
