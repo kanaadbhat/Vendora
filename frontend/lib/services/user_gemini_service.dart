@@ -3,22 +3,20 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
-
 import '../models/chat_message.model.dart';
 import '../models/subscription_model.dart';
 import '../models/subscriptionDeliveries.model.dart';
 import '../services/api_service.dart';
-
 import 'utils/user_prompt_builder.dart';
 import 'utils/message_utils.dart';
 
-class GeminiService {
+class UserChatGeminiService {
   final GenerativeModel _model;
   late ChatSession _chat;
   final ApiService _api;
   Map<String, dynamic>? _pendingAction;
 
-  GeminiService(this._api)
+  UserChatGeminiService(this._api)
     : _model = GenerativeModel(
         model: 'gemini-2.0-flash',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
@@ -62,7 +60,7 @@ class GeminiService {
 
       // Get response from Gemini
       debugPrint('[DEBUG] GeminiService.sendMessage() - Building prompt');
-      final prompt = PromptBuilder.buildPrompt(
+      final prompt = UserPromptBuilder.buildPrompt(
         userId: userId,
         message: message,
         subscriptions: subscriptions,

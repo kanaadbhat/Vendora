@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/productwithsubscribers.model.dart';
 
 final productWithSubscribersProvider = StateNotifierProvider<ProductWithSubscribersViewModel, AsyncValue<List<ProductWithSubscribers>>>(
@@ -15,11 +16,11 @@ class ProductWithSubscribersViewModel extends StateNotifier<AsyncValue<List<Prod
   final ApiService _apiService = ApiService();
 
     Future<void> fetchDetails() async {
+    debugPrint('inside fetchdetails');
     state = const AsyncValue.loading();
     try {
-      debugPrint('Fetching product details with subscribers...');
+      debugPrint('Fetching product details with subscriber..');
       final response = await _apiService.get('/vendorProduct/details');
-
       if (response.statusCode == 200) {
         final List<dynamic> detailsJson =
             response.data['productsWithSubscribers'] ?? [];
@@ -45,9 +46,9 @@ class ProductWithSubscribersViewModel extends StateNotifier<AsyncValue<List<Prod
     } catch (e, stackTrace) {
       if (e is TypeError) {
         debugPrint('Type Error: $e');
-        debugPrint('Stack trace: $stackTrace');
       }
       state = AsyncValue.error(e, stackTrace);
     }
   }
+
 }

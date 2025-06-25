@@ -66,7 +66,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     ref
         .read(chatViewModelProvider.notifier)
-        .sendMessage(
+        .customerChatSendMessage(
           message: message,
           userId: widget.userId,
           subscriptions: widget.subscriptions,
@@ -86,7 +86,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Delivery Assistant'),
+        title: const Text('Customer Assistant'),
         centerTitle: true,
       ),
       body: Column(

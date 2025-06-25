@@ -4,7 +4,9 @@ import '../models/chat_message.model.dart';
 import '../models/subscription_model.dart';
 import '../models/subscriptionDeliveries.model.dart';
 import '../services/user_gemini_service.dart';
+import '../services/vendor_gemini_service.dart';
 import '../services/api_service.dart';
+import '../../models/productwithsubscribers.model.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -31,10 +33,11 @@ class ChatState {
 }
 
 class ChatViewModel extends StateNotifier<ChatState> {
-  final GeminiService _geminiService;
+  final UserChatGeminiService _userchatgeminiService;
+  final VendorChatGeminiService _vendorchatgeminiService;
   final ApiService _apiService;
 
-  ChatViewModel(this._geminiService, this._apiService)
+  ChatViewModel(this._userchatgeminiService,this._vendorchatgeminiService, this._apiService)
     : super(const ChatState());
 
   Future<void> loadChatHistory(String userId) async {
@@ -104,7 +107,75 @@ class ChatViewModel extends StateNotifier<ChatState> {
     }
   }
 
-  Future<void> sendMessage({
+  Future<void> vendorChatSendMessage({
+    required String message,
+    required String userId,
+    required List<ProductWithSubscribers> productsWithSubscribers,
+  }) async {
+    if (userId.isEmpty) {
+      state = state.copyWith(error: 'User ID is required');
+      return;
+    }
+
+    // Add user message to state
+    final userMessage = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: message,
+      type: MessageType.user,
+      timestamp: DateTime.now(),
+      metadata: {'userId': userId},
+    );
+    state = state.copyWith(messages: [...state.messages, userMessage]);
+
+    try {
+      // Save user message to backend
+      await saveMessage(userMessage);
+
+      // Add loading message
+      final loadingMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: 'Processing...',
+        type: MessageType.system,
+        timestamp: DateTime.now(),
+        metadata: {'userId': userId, 'isLoading': true},
+      );
+      state = state.copyWith(messages: [...state.messages, loadingMessage]);
+
+      // Get AI response
+      final aiMessage = await _vendorchatgeminiService.sendMessage(
+        message: message,
+        userId: userId,
+        productsWithSubscribers: productsWithSubscribers,
+      );
+
+      // Remove loading message
+      state = state.copyWith(
+        messages:
+            state.messages.where((m) => m.id != loadingMessage.id).toList(),
+      );
+
+      final aiMessageWithMetadata = aiMessage.copyWith(
+        metadata: {...?aiMessage.metadata, 'userId': userId},
+      );
+
+      state = state.copyWith(
+        messages: [...state.messages, aiMessageWithMetadata],
+      );
+      await saveMessage(aiMessageWithMetadata);
+
+      if (aiMessageWithMetadata.metadata != null) {
+        final apiCall =
+            aiMessageWithMetadata.metadata!['apiCall'] as Map<String, dynamic>?;
+        if (apiCall != null) {
+          await _handleBackendAction(apiCall);
+        }
+      }
+    } catch (e) {
+      state = state.copyWith(error: 'Error sending message: $e');
+    }
+  }
+
+  Future<void> customerChatSendMessage({
     required String message,
     required String userId,
     required List<Subscription> subscriptions,
@@ -140,7 +211,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
       state = state.copyWith(messages: [...state.messages, loadingMessage]);
 
       // Get AI response
-      final aiMessage = await _geminiService.sendMessage(
+      final aiMessage = await _userchatgeminiService.sendMessage(
         message: message,
         userId: userId,
         subscriptions: subscriptions,
@@ -223,6 +294,7 @@ final chatViewModelProvider = StateNotifierProvider<ChatViewModel, ChatState>((
   ref,
 ) {
   final apiService = ApiService();
-  final geminiService = GeminiService(apiService);
-  return ChatViewModel(geminiService, apiService);
+  final userchatgeminiService = UserChatGeminiService(apiService);
+  final vendorchatgeminiService = VendorChatGeminiService();
+  return ChatViewModel( userchatgeminiService,vendorchatgeminiService,apiService);
 });

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
+import '../../models/productwithsubscribers.model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 import '../../widgets/chatbubble.dart';
 import '../../widgets/loadingbubble.dart';
 
 class VendorChatScreen extends ConsumerStatefulWidget {
   final String userId;
+  final List<ProductWithSubscribers> productsWithSubscribers;
 
   const VendorChatScreen({
     super.key,
     required this.userId,
+    required this.productsWithSubscribers,
   });
 
   @override
@@ -20,7 +23,7 @@ class VendorChatScreen extends ConsumerStatefulWidget {
 class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
+  
   @override
   void initState() {
     super.initState();
@@ -60,11 +63,11 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
 
     ref
         .read(chatViewModelProvider.notifier)
-        .sendMessage(
+        .vendorChatSendMessage(
           message: message,
           userId: widget.userId,
-          subscriptions: [], // Vendors don't have subscriptions
-          subscriptionDeliveries: [], // Vendors don't have subscription deliveries
+          productsWithSubscribers: widget.productsWithSubscribers,
+         
         );
 
     _messageController.clear();

@@ -3,7 +3,7 @@ import '../../models/subscription_model.dart';
 import 'message_utils.dart';
 import 'package:flutter/foundation.dart';
 
-class PromptBuilder {
+class UserPromptBuilder {
   /// Constructs the full “context prompt” to send to Gemini whenever we need
   /// to handle a normal chat or attempt to parse an action.
   static String buildPrompt({
@@ -20,10 +20,10 @@ class PromptBuilder {
     final subList = subscriptions
         .map(
           (s) => '''
-- ${s.name} from ${s.vendorName} (ID: ${s.id})
-  • Price: ₹${s.price.toStringAsFixed(2)}
-  • Subscribed since: ${MessageUtils.formatDate(s.createdAt)}
-''',
+          - ${s.name} from ${s.vendorName} (ID: ${s.id})
+            • Price: ₹${s.price.toStringAsFixed(2)}
+            • Subscribed since: ${MessageUtils.formatDate(s.createdAt)}
+          ''',
         )
         .join('\n');
 

@@ -64,9 +64,10 @@ class SubscriptionDelivery {
       subscriptionId: json['subscriptionId'],
       deliveryConfig: DeliveryConfig.fromJson(json['deliveryConfig']),
       deliveryLogs:
-          (json['deliveryLogs'] as List)
-              .map((log) => DeliveryLog.fromJson(log))
-              .toList(),
+          (json['deliveryLogs'] as List<dynamic>?)
+              ?.map((log) => DeliveryLog.fromJson(log))
+              .toList() ??
+          [],
     );
   }
 

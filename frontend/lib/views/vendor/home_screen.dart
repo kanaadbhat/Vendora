@@ -8,6 +8,7 @@ import '../auth/login_screen.dart';
 import 'chat_screen.dart';
 import 'dashboard_screen.dart';
 import '../../viewmodels/product_viewmodel.dart';
+import '../../viewmodels/productwithsubscribers_viewmodel.dart';
 
 class VendorHomeScreen extends ConsumerStatefulWidget {
   const VendorHomeScreen({super.key});
@@ -19,7 +20,7 @@ class VendorHomeScreen extends ConsumerStatefulWidget {
 class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   int _currentIndex = 0;
 
-@override
+  @override
   void initState() {
     super.initState();
     // Check authentication state
@@ -35,6 +36,7 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
         }
         // Fetch subscriptions if authenticated
         ref.read(productProvider.notifier).fetchProducts();
+        ref.read(productWithSubscribersProvider.notifier).fetchDetails();
       });
     });
   }
@@ -42,7 +44,6 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    
     return authState.when(
       data: (user) {
         if (user == null) {
@@ -50,17 +51,15 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         final List<Widget> _screens = [
           const DashboardScreen(),
           const ProductListScreen(),
-          VendorChatScreen(userId: user.id),
+          _buildChatScreen(user.id),
         ];
-        
+
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Vendor Dashboard'),
-          ),
+          appBar: AppBar(title: const Text('Vendor Dashboard')),
           drawer: const AppDrawer(role: 'vendor'),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
@@ -73,15 +72,33 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (_, __) => Scaffold(
-        body: Center(
-          child: Text('Error loading user data'),
-        ),
-      ),
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error:
+          (_, __) =>
+              Scaffold(body: Center(child: Text('Error loading user data'))),
     );
   }
-}
 
+  Widget _buildChatScreen(String userId) {
+    final productData = ref.watch(productWithSubscribersProvider);
+    return productData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('Error: $error')),
+      data: (productsWithSubscribers) {
+        if (productsWithSubscribers.isEmpty) {
+          return const Center(
+            child: Text('No products or subscriptions found.'),
+          );
+        }
+
+        return VendorChatScreen(
+          userId: userId,
+          productsWithSubscribers: productsWithSubscribers,
+        );
+      },
+    );
+  }
+
+}

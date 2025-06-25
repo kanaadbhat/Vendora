@@ -8,8 +8,7 @@ import 'chat_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../auth/login_screen.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
-import '../../models/subscription_model.dart' as ChatSubscription;
-import '../../viewmodels/subscriptionDelivery.viewmodel.dart';
+import '../../viewmodels/subscriptionswithdeliveries_viewmodel.dart';
 import 'dashboard_screen.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
@@ -45,7 +44,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    
+
     return authState.when(
       data: (user) {
         if (user == null) {
@@ -53,18 +52,16 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        
+
         final List<Widget> _screens = [
           const DashboardScreen(),
           const ExploreVendorsScreen(),
           const SubscriptionScreen(),
           _buildChatScreen(user.id),
         ];
-        
+
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Customer Dashboard'),
-          ),
+          appBar: AppBar(title: const Text('Customer Dashboard')),
           drawer: const AppDrawer(role: 'customer'),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
@@ -78,68 +75,37 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           ),
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (_, __) => Scaffold(
-        body: Center(
-          child: Text('Error loading user data'),
-        ),
-      ),
+      loading:
+          () =>
+              const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error:
+          (_, __) =>
+              Scaffold(body: Center(child: Text('Error loading user data'))),
     );
   }
-  
+
   Widget _buildChatScreen(String userId) {
-    final subscriptions = ref.watch(subscriptionProvider).value;
-    
-    if (subscriptions == null || subscriptions.isEmpty) {
-      return const Center(
-        child: Text('Please subscribe to a vendor to start chatting'),
-      );
-    }
-    
-    // This is a placeholder widget that will be replaced with the actual ChatScreen
-    // when the user taps on the Chat tab
-    return FutureBuilder(
-      future: _prepareChatScreen(userId, subscriptions),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (snapshot.hasData && snapshot.data != null) {
-          return snapshot.data!;
-        } else {
-          return const Center(child: Text('Unable to load chat'));
+    final chatScreenData = ref.watch(chatScreenDataProvider(userId));
+
+    return chatScreenData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Center(child: Text('Error: $error')),
+      data: (data) {
+        final chatSubscriptions = data.$1;
+        final deliveries = data.$2;
+
+        if (chatSubscriptions.isEmpty) {
+          return const Center(
+            child: Text('Please subscribe to a vendor to start chatting'),
+          );
         }
+
+        return ChatScreen(
+          userId: userId,
+          subscriptions: chatSubscriptions,
+          subscriptionDeliveries: deliveries,
+        );
       },
-    );
-  }
-  
-  Future<Widget> _prepareChatScreen(String userId, List<dynamic> subscriptions) async {
-    final chatSubscriptions = subscriptions.map((sub) => 
-      ChatSubscription.Subscription(
-        id: sub.id,
-        subscribedBy: userId,
-        productId: sub.productId,
-        name: sub.name,
-        description: sub.description,
-        price: sub.price,
-        image: sub.image,
-        vendorId: sub.vendorId,
-        vendorName: sub.vendorName,
-        createdAt: sub.createdAt,
-      )
-    ).toList();
-    
-    final deliveries = await ref
-        .read(subscriptionDeliveryProvider.notifier)
-        .fetchDeliveries(chatSubscriptions);
-    
-    return ChatScreen(
-      userId: userId,
-      subscriptions: chatSubscriptions,
-      subscriptionDeliveries: deliveries,
     );
   }
 }
