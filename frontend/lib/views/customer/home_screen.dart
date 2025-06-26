@@ -8,7 +8,6 @@ import 'chat_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../auth/login_screen.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
-import '../../viewmodels/subscriptionswithdeliveries_viewmodel.dart';
 import 'dashboard_screen.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
@@ -57,7 +56,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           const DashboardScreen(),
           const ExploreVendorsScreen(),
           const SubscriptionScreen(),
-          _buildChatScreen(user.id),
+          ChatScreen(userId:user.id),
         ];
 
         return Scaffold(
@@ -84,28 +83,4 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     );
   }
 
-  Widget _buildChatScreen(String userId) {
-    final chatScreenData = ref.watch(chatScreenDataProvider(userId));
-
-    return chatScreenData.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
-      data: (data) {
-        final chatSubscriptions = data.$1;
-        final deliveries = data.$2;
-
-        if (chatSubscriptions.isEmpty) {
-          return const Center(
-            child: Text('Please subscribe to a vendor to start chatting'),
-          );
-        }
-
-        return ChatScreen(
-          userId: userId,
-          subscriptions: chatSubscriptions,
-          subscriptionDeliveries: deliveries,
-        );
-      },
-    );
-  }
 }

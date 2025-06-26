@@ -1,12 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../models/chat_message.model.dart';
-import '../models/subscription_model.dart';
-import '../models/subscriptionDeliveries.model.dart';
 import '../services/user_gemini_service.dart';
 import '../services/vendor_gemini_service.dart';
 import '../services/api_service.dart';
 import '../../models/productwithsubscribers.model.dart';
+import 'subscriptionswithdeliveries_viewmodel.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -37,8 +36,11 @@ class ChatViewModel extends StateNotifier<ChatState> {
   final VendorChatGeminiService _vendorchatgeminiService;
   final ApiService _apiService;
 
-  ChatViewModel(this._userchatgeminiService,this._vendorchatgeminiService, this._apiService)
-    : super(const ChatState());
+  ChatViewModel(
+    this._userchatgeminiService,
+    this._vendorchatgeminiService,
+    this._apiService,
+  ) : super(const ChatState());
 
   Future<void> loadChatHistory(String userId) async {
     if (userId.isEmpty) {
@@ -64,7 +66,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
                 .whereType<ChatMessage>()
                 .toList();
 
-        // Sort messages by timestamp
         messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
         state = state.copyWith(messages: messages, isLoading: false);
@@ -111,13 +112,13 @@ class ChatViewModel extends StateNotifier<ChatState> {
     required String message,
     required String userId,
     required List<ProductWithSubscribers> productsWithSubscribers,
+    required WidgetRef ref,
   }) async {
     if (userId.isEmpty) {
       state = state.copyWith(error: 'User ID is required');
       return;
     }
 
-    // Add user message to state
     final userMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: message,
@@ -128,10 +129,8 @@ class ChatViewModel extends StateNotifier<ChatState> {
     state = state.copyWith(messages: [...state.messages, userMessage]);
 
     try {
-      // Save user message to backend
       await saveMessage(userMessage);
 
-      // Add loading message
       final loadingMessage = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         content: 'Processing...',
@@ -141,7 +140,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
       );
       state = state.copyWith(messages: [...state.messages, loadingMessage]);
 
-      // Get AI response
       final aiMessage = await _vendorchatgeminiService.sendMessage(
         message: message,
         userId: userId,
@@ -167,7 +165,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
         final apiCall =
             aiMessageWithMetadata.metadata!['apiCall'] as Map<String, dynamic>?;
         if (apiCall != null) {
-          await _handleBackendAction(apiCall);
+          await _handleBackendAction(apiCall,ref, userId);
         }
       }
     } catch (e) {
@@ -176,76 +174,75 @@ class ChatViewModel extends StateNotifier<ChatState> {
   }
 
   Future<void> customerChatSendMessage({
-    required String message,
-    required String userId,
-    required List<Subscription> subscriptions,
-    required List<SubscriptionDelivery> subscriptionDeliveries,
-  }) async {
-    if (userId.isEmpty) {
-      state = state.copyWith(error: 'User ID is required');
-      return;
-    }
-
-    // Add user message to state
-    final userMessage = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: message,
-      type: MessageType.user,
-      timestamp: DateTime.now(),
-      metadata: {'userId': userId},
-    );
-    state = state.copyWith(messages: [...state.messages, userMessage]);
-
-    try {
-      // Save user message to backend
-      await saveMessage(userMessage);
-
-      // Add loading message
-      final loadingMessage = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: 'Processing...',
-        type: MessageType.system,
-        timestamp: DateTime.now(),
-        metadata: {'userId': userId, 'isLoading': true},
-      );
-      state = state.copyWith(messages: [...state.messages, loadingMessage]);
-
-      // Get AI response
-      final aiMessage = await _userchatgeminiService.sendMessage(
-        message: message,
-        userId: userId,
-        subscriptions: subscriptions,
-        subscriptionDeliveries: subscriptionDeliveries,
-      );
-
-      // Remove loading message
-      state = state.copyWith(
-        messages:
-            state.messages.where((m) => m.id != loadingMessage.id).toList(),
-      );
-
-      final aiMessageWithMetadata = aiMessage.copyWith(
-        metadata: {...?aiMessage.metadata, 'userId': userId},
-      );
-
-      state = state.copyWith(
-        messages: [...state.messages, aiMessageWithMetadata],
-      );
-      await saveMessage(aiMessageWithMetadata);
-
-      if (aiMessageWithMetadata.metadata != null) {
-        final apiCall =
-            aiMessageWithMetadata.metadata!['apiCall'] as Map<String, dynamic>?;
-        if (apiCall != null) {
-          await _handleBackendAction(apiCall);
-        }
-      }
-    } catch (e) {
-      state = state.copyWith(error: 'Error sending message: $e');
-    }
+  required String message,
+  required String userId,
+  required WidgetRef ref,
+}) async {
+  if (userId.isEmpty) {
+    state = state.copyWith(error: 'User ID is required');
+    return;
   }
 
-  Future<void> _handleBackendAction(Map<String, dynamic> apiCall) async {
+  final userMessage = ChatMessage(
+    id: DateTime.now().millisecondsSinceEpoch.toString(),
+    content: message,
+    type: MessageType.user,
+    timestamp: DateTime.now(),
+    metadata: {'userId': userId},
+  );
+
+  state = state.copyWith(messages: [...state.messages, userMessage]);
+
+  try {
+    await saveMessage(userMessage);
+
+    final loadingMessage = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: 'Processing...',
+      type: MessageType.system,
+      timestamp: DateTime.now(),
+      metadata: {'userId': userId, 'isLoading': true},
+    );
+    state = state.copyWith(messages: [...state.messages, loadingMessage]);
+
+    final data = ref.read(chatScreenDataProvider(userId));
+    final subscriptions = data.asData?.value.$1 ?? [];
+    final subscriptionDeliveries = data.asData?.value.$2 ?? [];
+
+    final aiMessage = await _userchatgeminiService.sendMessage(
+      message: message,
+      userId: userId,
+      subscriptions: subscriptions,
+      subscriptionDeliveries: subscriptionDeliveries,
+      ref: ref, // 👈 Let Gemini handle cache invalidation
+    );
+
+    // Remove loading bubble
+    state = state.copyWith(
+      messages:
+          state.messages.where((m) => m.id != loadingMessage.id).toList(),
+    );
+
+    final aiMessageWithMetadata = aiMessage.copyWith(
+      metadata: {...?aiMessage.metadata, 'userId': userId},
+    );
+
+    state = state.copyWith(
+      messages: [...state.messages, aiMessageWithMetadata],
+    );
+
+    await saveMessage(aiMessageWithMetadata);
+
+  } catch (e) {
+    state = state.copyWith(error: 'Error sending message: $e');
+  }
+}
+
+  Future<void> _handleBackendAction(
+    Map<String, dynamic> apiCall,
+    WidgetRef ref,
+    String userId,
+  ) async {
     try {
       final endpoint = apiCall['endpoint'] as String? ?? '';
       final method = apiCall['method'] as String? ?? '';
@@ -279,6 +276,8 @@ class ChatViewModel extends StateNotifier<ChatState> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         debugPrint('API call successful: ${response.statusCode}');
+        debugPrint('Invalidating chatScreenDataProvider for userId: $userId');
+        ref.invalidate(chatScreenDataProvider(userId));
       } else {
         debugPrint('API call failed: ${response.statusCode}');
         throw Exception('API call failed with status ${response.statusCode}');
@@ -296,5 +295,9 @@ final chatViewModelProvider = StateNotifierProvider<ChatViewModel, ChatState>((
   final apiService = ApiService();
   final userchatgeminiService = UserChatGeminiService(apiService);
   final vendorchatgeminiService = VendorChatGeminiService();
-  return ChatViewModel( userchatgeminiService,vendorchatgeminiService,apiService);
+  return ChatViewModel(
+    userchatgeminiService,
+    vendorchatgeminiService,
+    apiService,
+  );
 });

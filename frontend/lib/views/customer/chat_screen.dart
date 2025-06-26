@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
-import '../../models/subscription_model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
-import '../../models/subscriptionDeliveries.model.dart';
 import '../../widgets/chatbubble.dart';
 import '../../widgets/loadingbubble.dart';
+import '../../viewmodels/subscriptionswithdeliveries_viewmodel.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String userId;
-  final List<Subscription> subscriptions;
-  final List<SubscriptionDelivery> subscriptionDeliveries;
 
-  const ChatScreen({
-    super.key,
-    required this.userId,
-    required this.subscriptions,
-    required this.subscriptionDeliveries,
-  });
+  const ChatScreen({super.key, required this.userId});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -69,8 +61,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .customerChatSendMessage(
           message: message,
           userId: widget.userId,
-          subscriptions: widget.subscriptions,
-          subscriptionDeliveries: widget.subscriptionDeliveries,
+          ref: ref,
         );
 
     _messageController.clear();
@@ -80,65 +71,76 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatViewModelProvider);
+    final chatScreenData = ref.watch(chatScreenDataProvider(widget.userId));
 
-    // Scroll to bottom when messages change
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Customer Assistant'),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child:
-                chatState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                      controller: _scrollController,
-                      itemCount: chatState.messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = chatState.messages[index];
-                        if (msg.type == MessageType.system &&
-                            msg.metadata?['isLoading'] == true) {
-                          return LoadingBubble();
-                        }
-                        return ChatBubble(message: msg);
-                      },
-                    ),
-          ),
-          if (chatState.error != null)
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.red[100],
-              child: Text(
-                chatState.error!,
-                style: const TextStyle(color: Colors.red),
+      appBar: AppBar(title: const Text('Customer Assistant')),
+      body: chatScreenData.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (data) {
+          final subscriptions = data.$1;
+          if (subscriptions.isEmpty) {
+            return const Center(child: Text('Please subscribe to a vendor.'));
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child:
+                    chatState.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.builder(
+                          controller: _scrollController,
+                          itemCount: chatState.messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = chatState.messages[index];
+                            if (msg.type == MessageType.system &&
+                                msg.metadata?['isLoading'] == true) {
+                              return LoadingBubble();
+                            }
+                            return ChatBubble(message: msg);
+                          },
+                        ),
               ),
-            ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type your message...',
-                    ),
-                    onSubmitted: (_) => _sendMessage(),
+              if (chatState.error != null)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.red[100],
+                  child: Text(
+                    chatState.error!,
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 6,
                 ),
-              ],
-            ),
-          ),
-        ],
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Type your message...',
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

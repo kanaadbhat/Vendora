@@ -67,7 +67,7 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
           message: message,
           userId: widget.userId,
           productsWithSubscribers: widget.productsWithSubscribers,
-         
+          ref: ref,
         );
 
     _messageController.clear();

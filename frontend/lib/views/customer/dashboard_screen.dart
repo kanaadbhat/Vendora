@@ -15,7 +15,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subscriptionsAsync = ref.watch(subscriptionProvider);
     final user = ref.watch(authProvider).value;
-    
+
     return subscriptionsAsync.when(
       data: (subscriptions) {
         // Calculate total due amount
@@ -37,9 +37,7 @@ class DashboardScreen extends ConsumerWidget {
                   gradient: LinearGradient(
                     colors: [
                       Theme.of(context).colorScheme.primary,
-                      Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.7),
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -132,8 +130,7 @@ class DashboardScreen extends ConsumerWidget {
                                   context,
                                   MaterialPageRoute(
                                     builder:
-                                        (context) =>
-                                            const SubscriptionScreen(),
+                                        (context) => const SubscriptionScreen(),
                                   ),
                                 );
                               },
@@ -238,8 +235,7 @@ class DashboardScreen extends ConsumerWidget {
                               context,
                               MaterialPageRoute(
                                 builder:
-                                    (context) =>
-                                        const ExploreVendorsScreen(),
+                                    (context) => const ExploreVendorsScreen(),
                               ),
                             ),
                           ),
@@ -251,8 +247,7 @@ class DashboardScreen extends ConsumerWidget {
                               context,
                               MaterialPageRoute(
                                 builder:
-                                    (context) =>
-                                        const SubscriptionScreen(),
+                                    (context) => const SubscriptionScreen(),
                               ),
                             ),
                           ),
@@ -276,13 +271,11 @@ class DashboardScreen extends ConsumerWidget {
                                                 subscribedBy: user.id,
                                                 productId: sub.productId,
                                                 name: sub.name,
-                                                description:
-                                                    sub.description,
+                                                description: sub.description,
                                                 price: sub.price,
                                                 image: sub.image,
                                                 vendorId: sub.vendorId,
-                                                vendorName:
-                                                    sub.vendorName,
+                                                vendorName: sub.vendorName,
                                                 createdAt: sub.createdAt,
                                               ),
                                         )
@@ -297,20 +290,13 @@ class DashboardScreen extends ConsumerWidget {
                                     context,
                                     MaterialPageRoute(
                                       builder:
-                                          (context) => ChatScreen(
-                                            userId: user.id,
-                                            subscriptions:
-                                                chatSubscriptions,
-                                            subscriptionDeliveries:
-                                                deliveries,
-                                          ),
+                                          (context) =>
+                                              ChatScreen(userId: user.id),
                                     ),
                                   );
                                 }
                               } else {
-                                ScaffoldMessenger.of(
-                                  context,
-                                ).showSnackBar(
+                                ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                       'Please subscribe to a vendor to start chatting',
@@ -337,7 +323,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
     final backgroundColor =
