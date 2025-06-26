@@ -1,29 +1,35 @@
 import 'package:dio/dio.dart';
 import 'auth_service.dart';
-import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'package:flutter/foundation.dart';
 
 class ApiService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000',
-      connectTimeout: Duration(seconds: 10),
-      receiveTimeout: Duration(seconds: 10),
-      headers: {"Content-Type": "application/json"},
-      validateStatus: (status) => status! < 500,
-    ),
-  );
+  final String apiBaseUrl;
+  late final Dio _dio;
+
+  ApiService()
+    : apiBaseUrl =
+          (kIsWeb && kReleaseMode)
+              ? const String.fromEnvironment('API_BASE_URL', defaultValue: '')
+              : (dotenv.env['API_BASE_URL'] ?? '') {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: apiBaseUrl,
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        headers: {"Content-Type": "application/json"},
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+
+    _initializeToken();
+    _setupInterceptors();
+  }
 
   final AuthService _authService = AuthService();
   bool _isRefreshing = false;
   final _refreshController = StreamController<bool>.broadcast();
-
-  ApiService() {
-    _initializeToken();
-    _setupInterceptors();
-  }
 
   void _setupInterceptors() {
     _dio.interceptors.add(
@@ -71,10 +77,14 @@ class ApiService {
     debugPrint("[DEBUG] ApiService._initializeToken() - Initializing token");
     String? token = await _authService.getToken();
     if (token != null) {
-      debugPrint("[DEBUG] ApiService._initializeToken() - Setting Authorization header with token");
+      debugPrint(
+        "[DEBUG] ApiService._initializeToken() - Setting Authorization header with token",
+      );
       _dio.options.headers["Authorization"] = "Bearer $token";
     } else {
-      debugPrint("[DEBUG] ApiService._initializeToken() - No token found, Authorization header not set");
+      debugPrint(
+        "[DEBUG] ApiService._initializeToken() - No token found, Authorization header not set",
+      );
     }
   }
 
@@ -89,13 +99,19 @@ class ApiService {
   Future<void> logout() async {
     debugPrint("[DEBUG] ApiService.logout() - Starting logout process");
     try {
-      debugPrint("[DEBUG] ApiService.logout() - Sending logout request to server");
+      debugPrint(
+        "[DEBUG] ApiService.logout() - Sending logout request to server",
+      );
       final response = await _dio.post('/user/logout');
-      debugPrint("[DEBUG] ApiService.logout() - Server response: ${response.statusCode}");
+      debugPrint(
+        "[DEBUG] ApiService.logout() - Server response: ${response.statusCode}",
+      );
     } catch (e) {
       debugPrint("[DEBUG] ApiService.logout() - Error during API call: $e");
     } finally {
-      debugPrint("[DEBUG] ApiService.logout() - Clearing local storage and headers");
+      debugPrint(
+        "[DEBUG] ApiService.logout() - Clearing local storage and headers",
+      );
       await _authService.logout();
       _dio.options.headers.remove("Authorization");
       debugPrint("[DEBUG] ApiService.logout() - Authorization header removed");
@@ -119,22 +135,30 @@ class ApiService {
     debugPrint("[DEBUG] ApiService.post() - Endpoint: $endpoint");
     try {
       Response response = await _dio.post(endpoint, data: data);
-      debugPrint("[DEBUG] ApiService.post() - Response status: ${response.statusCode}");
+      debugPrint(
+        "[DEBUG] ApiService.post() - Response status: ${response.statusCode}",
+      );
 
       // Update tokens for login and register responses
       if ((endpoint == "/user/login" || endpoint == "/user/register") &&
           response.data["accessToken"] != null) {
-        debugPrint("[DEBUG] ApiService.post() - Received new access token from ${endpoint}");
+        debugPrint(
+          "[DEBUG] ApiService.post() - Received new access token from ${endpoint}",
+        );
         await _updateToken(response.data["accessToken"]);
         if (response.data["refreshToken"] != null) {
-          debugPrint("[DEBUG] ApiService.post() - Received new refresh token from ${endpoint}");
+          debugPrint(
+            "[DEBUG] ApiService.post() - Received new refresh token from ${endpoint}",
+          );
           await _authService.saveRefreshToken(response.data["refreshToken"]);
         }
-        
+
         // Verify tokens were saved
         final token = await _authService.getToken();
         final refreshToken = await _authService.getRefreshToken();
-        debugPrint("[DEBUG] ApiService.post() - Token verification: access token ${token != null ? 'exists' : 'null'}, refresh token ${refreshToken != null ? 'exists' : 'null'}");
+        debugPrint(
+          "[DEBUG] ApiService.post() - Token verification: access token ${token != null ? 'exists' : 'null'}, refresh token ${refreshToken != null ? 'exists' : 'null'}",
+        );
       }
 
       return response;

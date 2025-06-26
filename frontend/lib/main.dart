@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 
 import 'views/auth/auth_screen.dart';
 import 'views/customer/home_screen.dart';
@@ -13,7 +13,17 @@ import 'widgets/loading_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
- await dotenv.load(fileName: kReleaseMode ? '.env' : '.env.local');
+  if (kIsWeb) {
+    if (!kReleaseMode) {
+      await dotenv.load(fileName:'.env.local');
+    }
+  } else {
+    if (kReleaseMode) {
+      await dotenv.load(fileName:'.env');
+    } else {
+      await dotenv.load(fileName:'.env.local');
+    }
+  }
   runApp(const ProviderScope(child: MyApp()));
 }
 

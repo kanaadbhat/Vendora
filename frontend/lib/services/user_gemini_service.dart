@@ -21,10 +21,18 @@ class UserChatGeminiService {
   UserChatGeminiService(this._api)
     : _model = GenerativeModel(
         model: 'gemini-2.0-flash',
-        apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
+        apiKey: _getApiKey(),
       ) {
     _chat = _model.startChat();
     debugPrint('[DEBUG] GeminiService initialized');
+  }
+
+  static String _getApiKey() {
+    if (kIsWeb && kReleaseMode) {
+      // Only use dart-define in production builds on web
+      return const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    }
+    return dotenv.env['GEMINI_API_KEY'] ?? '';
   }
 
   /// Resets the chat session and clears any pending action
