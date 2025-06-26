@@ -4,8 +4,8 @@ import '../models/chat_message.model.dart';
 import '../services/user_gemini_service.dart';
 import '../services/vendor_gemini_service.dart';
 import '../services/api_service.dart';
-import '../../models/productwithsubscribers.model.dart';
 import 'subscriptionswithdeliveries_viewmodel.dart';
+import '../../viewmodels/productwithsubscribers_viewmodel.dart';
 
 class ChatState {
   final List<ChatMessage> messages;
@@ -111,7 +111,6 @@ class ChatViewModel extends StateNotifier<ChatState> {
   Future<void> vendorChatSendMessage({
     required String message,
     required String userId,
-    required List<ProductWithSubscribers> productsWithSubscribers,
     required WidgetRef ref,
   }) async {
     if (userId.isEmpty) {
@@ -126,6 +125,7 @@ class ChatViewModel extends StateNotifier<ChatState> {
       timestamp: DateTime.now(),
       metadata: {'userId': userId},
     );
+
     state = state.copyWith(messages: [...state.messages, userMessage]);
 
     try {
@@ -140,13 +140,18 @@ class ChatViewModel extends StateNotifier<ChatState> {
       );
       state = state.copyWith(messages: [...state.messages, loadingMessage]);
 
+      // Get product/subscriber data from provider
+      final data = ref.read(productWithSubscribersProvider(userId));
+      final productsWithSubscribers = data.asData?.value ?? [];
+
       final aiMessage = await _vendorchatgeminiService.sendMessage(
         message: message,
         userId: userId,
         productsWithSubscribers: productsWithSubscribers,
+        ref: ref,
       );
 
-      // Remove loading message
+      // Remove loading bubble
       state = state.copyWith(
         messages:
             state.messages.where((m) => m.id != loadingMessage.id).toList(),
@@ -159,132 +164,74 @@ class ChatViewModel extends StateNotifier<ChatState> {
       state = state.copyWith(
         messages: [...state.messages, aiMessageWithMetadata],
       );
-      await saveMessage(aiMessageWithMetadata);
 
-      if (aiMessageWithMetadata.metadata != null) {
-        final apiCall =
-            aiMessageWithMetadata.metadata!['apiCall'] as Map<String, dynamic>?;
-        if (apiCall != null) {
-          await _handleBackendAction(apiCall,ref, userId);
-        }
-      }
+      await saveMessage(aiMessageWithMetadata);
     } catch (e) {
       state = state.copyWith(error: 'Error sending message: $e');
     }
   }
 
   Future<void> customerChatSendMessage({
-  required String message,
-  required String userId,
-  required WidgetRef ref,
-}) async {
-  if (userId.isEmpty) {
-    state = state.copyWith(error: 'User ID is required');
-    return;
-  }
+    required String message,
+    required String userId,
+    required WidgetRef ref,
+  }) async {
+    if (userId.isEmpty) {
+      state = state.copyWith(error: 'User ID is required');
+      return;
+    }
 
-  final userMessage = ChatMessage(
-    id: DateTime.now().millisecondsSinceEpoch.toString(),
-    content: message,
-    type: MessageType.user,
-    timestamp: DateTime.now(),
-    metadata: {'userId': userId},
-  );
-
-  state = state.copyWith(messages: [...state.messages, userMessage]);
-
-  try {
-    await saveMessage(userMessage);
-
-    final loadingMessage = ChatMessage(
+    final userMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: 'Processing...',
-      type: MessageType.system,
+      content: message,
+      type: MessageType.user,
       timestamp: DateTime.now(),
-      metadata: {'userId': userId, 'isLoading': true},
-    );
-    state = state.copyWith(messages: [...state.messages, loadingMessage]);
-
-    final data = ref.read(chatScreenDataProvider(userId));
-    final subscriptions = data.asData?.value.$1 ?? [];
-    final subscriptionDeliveries = data.asData?.value.$2 ?? [];
-
-    final aiMessage = await _userchatgeminiService.sendMessage(
-      message: message,
-      userId: userId,
-      subscriptions: subscriptions,
-      subscriptionDeliveries: subscriptionDeliveries,
-      ref: ref, // 👈 Let Gemini handle cache invalidation
+      metadata: {'userId': userId},
     );
 
-    // Remove loading bubble
-    state = state.copyWith(
-      messages:
-          state.messages.where((m) => m.id != loadingMessage.id).toList(),
-    );
+    state = state.copyWith(messages: [...state.messages, userMessage]);
 
-    final aiMessageWithMetadata = aiMessage.copyWith(
-      metadata: {...?aiMessage.metadata, 'userId': userId},
-    );
-
-    state = state.copyWith(
-      messages: [...state.messages, aiMessageWithMetadata],
-    );
-
-    await saveMessage(aiMessageWithMetadata);
-
-  } catch (e) {
-    state = state.copyWith(error: 'Error sending message: $e');
-  }
-}
-
-  Future<void> _handleBackendAction(
-    Map<String, dynamic> apiCall,
-    WidgetRef ref,
-    String userId,
-  ) async {
     try {
-      final endpoint = apiCall['endpoint'] as String? ?? '';
-      final method = apiCall['method'] as String? ?? '';
-      final body = apiCall['body'];
+      await saveMessage(userMessage);
 
-      debugPrint('=== API Call Debug ===');
-      debugPrint('Method: $method');
-      debugPrint('Endpoint: $endpoint');
-      debugPrint('Body: ${body ?? 'No body'}');
-      debugPrint('=======================');
+      final loadingMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: 'Processing...',
+        type: MessageType.system,
+        timestamp: DateTime.now(),
+        metadata: {'userId': userId, 'isLoading': true},
+      );
+      state = state.copyWith(messages: [...state.messages, loadingMessage]);
 
-      if (endpoint.isEmpty || method.isEmpty) {
-        debugPrint('Invalid API call metadata');
-        return;
-      }
+      final data = ref.read(chatScreenDataProvider(userId));
+      final subscriptions = data.asData?.value.$1 ?? [];
+      final subscriptionDeliveries = data.asData?.value.$2 ?? [];
 
-      dynamic response;
-      switch (method) {
-        case 'POST':
-          response = await _apiService.post(endpoint, data: body ?? {});
-          break;
-        case 'PUT':
-          response = await _apiService.put(endpoint, data: body ?? {});
-          break;
-        case 'GET':
-          response = await _apiService.get(endpoint);
-          break;
-        default:
-          throw Exception('Unsupported HTTP method: $method');
-      }
+      final aiMessage = await _userchatgeminiService.sendMessage(
+        message: message,
+        userId: userId,
+        subscriptions: subscriptions,
+        subscriptionDeliveries: subscriptionDeliveries,
+        ref: ref,
+      );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('API call successful: ${response.statusCode}');
-        debugPrint('Invalidating chatScreenDataProvider for userId: $userId');
-        ref.invalidate(chatScreenDataProvider(userId));
-      } else {
-        debugPrint('API call failed: ${response.statusCode}');
-        throw Exception('API call failed with status ${response.statusCode}');
-      }
+      // Remove loading bubble
+      state = state.copyWith(
+        messages:
+            state.messages.where((m) => m.id != loadingMessage.id).toList(),
+      );
+
+      final aiMessageWithMetadata = aiMessage.copyWith(
+        metadata: {...?aiMessage.metadata, 'userId': userId},
+      );
+
+      state = state.copyWith(
+        messages: [...state.messages, aiMessageWithMetadata],
+      );
+
+      await saveMessage(aiMessageWithMetadata);
     } catch (e) {
-      debugPrint('Error executing API call: $e');
-      throw e;
+      state = state.copyWith(error: 'Error sending message: $e');
     }
   }
 }

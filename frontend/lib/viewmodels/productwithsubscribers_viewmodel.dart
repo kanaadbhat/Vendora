@@ -1,54 +1,57 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../models/productwithsubscribers.model.dart';
 
-final productWithSubscribersProvider = StateNotifierProvider<ProductWithSubscribersViewModel, AsyncValue<List<ProductWithSubscribers>>>(
-  (ref) => ProductWithSubscribersViewModel(ref),
+import '../models/productwithsubscribers.model.dart';
+import '../services/api_service.dart';
+
+final productWithSubscribersProvider = AsyncNotifierProvider.family<
+  ProductWithSubscribersNotifier,
+  List<ProductWithSubscribers>,
+  String
+>(
+  ProductWithSubscribersNotifier.new,
 );
 
-
-class ProductWithSubscribersViewModel extends StateNotifier<AsyncValue<List<ProductWithSubscribers>>> {
-  ProductWithSubscribersViewModel(this.ref) : super(const AsyncValue.data([]));
-
-  final Ref ref;
+class ProductWithSubscribersNotifier
+    extends FamilyAsyncNotifier<List<ProductWithSubscribers>, String> {
   final ApiService _apiService = ApiService();
 
-    Future<void> fetchDetails() async {
-    debugPrint('inside fetchdetails');
-    state = const AsyncValue.loading();
+  @override
+  Future<List<ProductWithSubscribers>> build(String userId) async {
+    debugPrint('[DEBUG] Fetching ProductWithSubscribers for userId: $userId');
+
     try {
-      debugPrint('Fetching product details with subscriber..');
       final response = await _apiService.get('/vendorProduct/details');
+
       if (response.statusCode == 200) {
         final List<dynamic> detailsJson =
             response.data['productsWithSubscribers'] ?? [];
 
-        final details =
-            detailsJson.map((json) {
-              try {
-                return ProductWithSubscribers.fromJson(json);
-              } catch (e) {
-                debugPrint('Error parsing productWithSubscribers: $e');
-                debugPrint('Problematic JSON: $json');
-                rethrow;
-              }
-            }).toList();
+        final details = detailsJson.map((json) {
+          try {
+            return ProductWithSubscribers.fromJson(json);
+          } catch (e) {
+            debugPrint('[ERROR] Parsing ProductWithSubscribers: $e');
+            debugPrint('[DATA] JSON: $json');
+            rethrow;
+          }
+        }).toList();
 
-        state = AsyncValue.data(details);
+        return details;
       } else {
         final errorMessage = response.data['message'];
-        final error =
-            errorMessage?.toString() ?? 'Failed to fetch product details';
-        throw Exception(error);
+        throw Exception(
+            errorMessage?.toString() ?? 'Failed to fetch product details');
       }
     } catch (e, stackTrace) {
-      if (e is TypeError) {
-        debugPrint('Type Error: $e');
-      }
-      state = AsyncValue.error(e, stackTrace);
+      debugPrint('[ERROR] ProductWithSubscribers fetch error: $e');
+      throw AsyncError(e, stackTrace);
     }
   }
 
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => build(arg));
+  }
 }

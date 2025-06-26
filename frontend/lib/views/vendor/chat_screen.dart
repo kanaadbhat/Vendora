@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/chat_message.model.dart';
-import '../../models/productwithsubscribers.model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
 import '../../widgets/chatbubble.dart';
 import '../../widgets/loadingbubble.dart';
+import '../../viewmodels/productwithsubscribers_viewmodel.dart';
 
 class VendorChatScreen extends ConsumerStatefulWidget {
   final String userId;
-  final List<ProductWithSubscribers> productsWithSubscribers;
 
   const VendorChatScreen({
     super.key,
     required this.userId,
-    required this.productsWithSubscribers,
   });
 
   @override
@@ -66,7 +64,6 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
         .vendorChatSendMessage(
           message: message,
           userId: widget.userId,
-          productsWithSubscribers: widget.productsWithSubscribers,
           ref: ref,
         );
 
@@ -77,6 +74,8 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatState = ref.watch(chatViewModelProvider);
+    final data = ref.watch(productWithSubscribersProvider(widget.userId));
+
 
     // Scroll to bottom when messages change
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
@@ -86,7 +85,14 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
         title: const Text('Vendor Assistant'),
         centerTitle: true,
       ),
-      body: Column(
+      body:  data.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (data) {
+          if (data.isEmpty) {
+            return const Center(child: Text('Please add products.'));
+          }
+      return Column(
         children: [
           Expanded(
             child:
@@ -136,6 +142,9 @@ class _VendorChatScreenState extends ConsumerState<VendorChatScreen> {
             ),
           ),
         ],
+      );
+
+        },
       ),
     );
   }

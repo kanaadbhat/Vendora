@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
 import 'role_viewmodel.dart';
@@ -15,7 +14,6 @@ class AuthViewModel extends StateNotifier<AsyncValue<User?>> {
   AuthViewModel(this.ref) : super(const AsyncValue.data(null));
 
   final Ref ref;
-  final AuthService _authService = AuthService();
   final ApiService _apiService = ApiService();
 
   Future<void> login(String email, String password) async {

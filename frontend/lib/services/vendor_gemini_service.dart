@@ -5,6 +5,7 @@ import '../models/chat_message.model.dart';
 import '../models/productwithsubscribers.model.dart'; 
 import 'utils/vendor_prompt_builder.dart'; 
 import 'utils/message_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class VendorChatGeminiService {
   final GenerativeModel _model;
@@ -30,6 +31,7 @@ class VendorChatGeminiService {
     required String message,
     required String userId,
     required List<ProductWithSubscribers> productsWithSubscribers,
+     required WidgetRef ref,
   }) async {
     debugPrint('[DEBUG] VendorChatGeminiService.sendMessage() - Message: $message');
     debugPrint('[DEBUG] VendorChatGeminiService.sendMessage() - Products count: ${productsWithSubscribers.length}');
