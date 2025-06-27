@@ -23,6 +23,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    
     // Check authentication state
     Future.microtask(() {
       final authState = ref.watch(authProvider);

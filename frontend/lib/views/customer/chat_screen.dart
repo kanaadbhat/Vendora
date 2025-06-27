@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/chat_message.model.dart';
 import '../../viewmodels/chat_viewmodel.dart';
-import '../../widgets/chatbubble.dart';
-import '../../widgets/loadingbubble.dart';
+import '../../widgets/chat/chatInputBar.dart';
+import '../../widgets/chat/chatMessageList.dart';
+import '../../widgets/chat/errorBanner.dart';
 import '../../viewmodels/subscriptionswithdeliveries_viewmodel.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -22,7 +22,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    // Load chat history when screen starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatViewModelProvider.notifier).loadChatHistory(widget.userId);
     });
@@ -48,7 +47,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Scroll to bottom when messages change
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
@@ -89,54 +87,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           return Column(
             children: [
               Expanded(
-                child:
-                    chatState.isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.builder(
-                          controller: _scrollController,
-                          itemCount: chatState.messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = chatState.messages[index];
-                            if (msg.type == MessageType.system &&
-                                msg.metadata?['isLoading'] == true) {
-                              return LoadingBubble();
-                            }
-                            return ChatBubble(message: msg);
-                          },
-                        ),
+                child: ChatMessagesList(
+                  messages: chatState.messages,
+                  isLoading: chatState.isLoading,
+                  scrollController: _scrollController,
+                ),
               ),
               if (chatState.error != null)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  color: Colors.red[100],
-                  child: Text(
-                    chatState.error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
+                ChatErrorBanner(error: chatState.error!),
               const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8.0,
-                  vertical: 6,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _messageController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type your message...',
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: _sendMessage,
-                    ),
-                  ],
-                ),
+              ChatInputBar(
+                controller: _messageController,
+                onSend: _sendMessage,
               ),
             ],
           );
