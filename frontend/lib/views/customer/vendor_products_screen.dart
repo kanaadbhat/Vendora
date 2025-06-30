@@ -187,129 +187,124 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
         );
       },
     );
-    
+  }
+   Widget _buildProductCard(Product product, AsyncValue<bool> subscriptionStatus) {
+    return SizedBox(
+      width: 250,
+      height: 230,
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.network(
+                product.image,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.broken_image, size: 40),
+                ),
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    product.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '₹${double.parse(product.price).toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      subscriptionStatus.when(
+                        data: (isSubscribed) => ElevatedButton(
+                          onPressed: isSubscribed ? null : () => _subscribeToProduct(product),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            textStyle: const TextStyle(fontSize: 10),
+                          ),
+                          child: Text(isSubscribed ? 'Subscribed' : 'Subscribe'),
+                        ),
+                        loading: () => const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        error: (err, _) => const Icon(Icons.error, size: 18, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('${widget.vendorName}\'s Products')),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _products.isEmpty
-              ? const Center(child: Text('No products found'))
-              : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _products.length,
-                itemBuilder: (context, index) {
-                  final product = _products[index];
-                  final subscriptionStatus = ref.watch(
-                    isProductSubscribedProvider(product.id),
-                  );
+    final width = MediaQuery.of(context).size.width;
+    final crossAxis = width > 800 ? 4 : width > 600 ? 3 : width > 400 ? 2 : 1;
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Column(
-                      children: [
-                        if (product.image.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(4),
-                            ),
-                            child: Image.network(
-                              product.image,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[200],
-                                  child: Icon(Icons.broken_image, size: 50),
-                                );
-                              },
-                              loadingBuilder: (
-                                context,
-                                child,
-                                loadingProgress,
-                              ) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value:
-                                        loadingProgress.expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                product.description,
-                                style: const TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '\$${double.parse(product.price).toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: subscriptionStatus.when(
-                                  data: (isSubscribed) {
-                                    return ElevatedButton(
-                                      onPressed:
-                                          isSubscribed
-                                              ? null // Disable button if already subscribed
-                                              : () =>
-                                                  _subscribeToProduct(product),
-                                      child: Text(
-                                        isSubscribed
-                                            ? 'Already Subscribed'
-                                            : 'Subscribe',
-                                      ),
-                                    );
-                                  },
-                                  loading:
-                                      () => const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                  error:
-                                      (error, stackTrace) =>
-                                          Text('Error: $error'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("${widget.vendorName}'s Products"),
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _products.isEmpty
+              ? const Center(child: Text('No products available'))
+              : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxis,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.7,
                     ),
-                  );
-                },
-              ),
+                    itemCount: _products.length,
+                    itemBuilder: (context, index) {
+                      final product = _products[index];
+                      final subscriptionStatus = ref.watch(
+                        isProductSubscribedProvider(product.id),
+                      );
+                      return _buildProductCard(product, subscriptionStatus);
+                    },
+                  ),
+                ),
     );
   }
+
 }

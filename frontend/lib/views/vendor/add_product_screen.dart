@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/product_viewmodel.dart';
+import '../../services/pick_and_upload.dart';
+import 'dart:io';
+import 'package:dotted_border/dotted_border.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -14,15 +17,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
-  final _imageController = TextEditingController();
   bool _isSubmitting = false;
+  File? _selectedImage;
+  String? _uploadedImageUrl;
+  final pickAndUpload = PickAndUpload();
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
-    _imageController.dispose();
     super.dispose();
   }
 
@@ -38,16 +42,13 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       debugPrint('Submitting product form...');
       final price = _priceController.text;
 
-      // Use a default image URL if none is provided
-    final imageUrl = _imageController.text.isNotEmpty ? _imageController.text : null;
-
       await ref
           .read(productProvider.notifier)
           .addProduct(
             _nameController.text,
             _descriptionController.text,
             price,
-            imageUrl,
+            _uploadedImageUrl,
           );
 
       if (mounted) {
@@ -142,25 +143,102 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _imageController,
-                decoration: const InputDecoration(
-                  labelText: 'Image URL',
-                  border: OutlineInputBorder(),
-                ),
-                /*
+              FormField<File>(
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an image URL';
-                  }
-                  final uri = Uri.tryParse(value);
-                  if (uri == null || !uri.hasScheme) {
-                    return 'Please enter a valid URL';
+                  if (_selectedImage == null) {
+                    return 'Please select a product photo';
                   }
                   return null;
                 },
-                */
+                builder: (state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          final imageUrl = await pickAndUpload
+                              .pickAndUploadImage(context);
+
+                          if (imageUrl != null) {
+                            setState(() {
+                              _uploadedImageUrl = imageUrl;
+                              _selectedImage = File('dummy');
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: state.hasError ? Colors.red : Colors.grey,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child:
+                                _uploadedImageUrl != null
+                                    ? Container(
+                                      width: 150,
+                                      height: 150,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: Colors.green,
+                                          width: 3,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.network(
+                                          _uploadedImageUrl!,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    )
+                                    : DottedBorder(
+                                      borderType: BorderType.RRect,
+                                      radius: const Radius.circular(12),
+                                      color: Colors.grey,
+                                      strokeWidth: 2,
+                                      dashPattern: const [6, 4],
+                                      child: Container(
+                                        width: 150,
+                                        height: 150,
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          'Add Product Photo',
+                                          style: TextStyle(
+                                            color: Theme.of(context).hintColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Label below the field
+                      Text(
+                        _uploadedImageUrl != null
+                            ? 'File uploaded successfully'
+                            : 'Please select a Product photo',
+                        style: TextStyle(
+                          color:
+                              state.hasError
+                                  ? Colors.red
+                                  : _uploadedImageUrl != null
+                                  ? Colors.green
+                                  : Theme.of(context).hintColor,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
+
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isSubmitting ? null : _submitForm,
