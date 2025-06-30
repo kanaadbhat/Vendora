@@ -42,6 +42,12 @@ dependencies:
   flutter_riverpod: ^2.6.1
   google_generative_ai: ^0.2.0
   flutter_dotenv: ^5.1.0
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+  mime: ^2.0.0
+  http_parser: ^4.0.2
+  file_picker: ^10.2.0
+  dotted_border: ^2.1.0
 
 dev_dependencies:
   flutter_test:

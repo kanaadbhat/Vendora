@@ -27,7 +27,11 @@ const userSchema = mongoose.Schema({
     },
     businessDescription: {
         type: String,
-    }
+    },
+    profileimage : {
+        type: String,
+        required: true
+    },
 });
 
 export const User = mongoose.model('User', userSchema);

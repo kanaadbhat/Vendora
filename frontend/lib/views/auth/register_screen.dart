@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../../viewmodels/theme_viewmodel.dart'; 
+import '../../services/pick_and_upload.dart';
+import 'dart:io';
+import 'package:dotted_border/dotted_border.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -20,6 +22,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _businessNameController = TextEditingController();
   final _businessDescriptionController = TextEditingController();
   String _selectedRole = 'customer';
+  File? _selectedImage;
+  String? _uploadedImageUrl;
+  final pickAndUpload = PickAndUpload();
 
   @override
   void dispose() {
@@ -52,6 +57,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       'phone': _phoneController.text,
       'password': _passwordController.text,
       'role': _selectedRole,
+      if (_uploadedImageUrl != null) 'profileimage': _uploadedImageUrl,
     };
 
     if (_selectedRole == 'vendor') {
@@ -69,7 +75,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      resizeToAvoidBottomInset: true, 
+      resizeToAvoidBottomInset: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Register'),
@@ -218,8 +224,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             });
                           },
                         ),
-                        if (_selectedRole == 'vendor') ...[  
-                          const SizedBox(height: 12),                        
+                        if (_selectedRole == 'vendor') ...[
+                          const SizedBox(height: 12),
                           TextFormField(
                             controller: _businessNameController,
                             decoration: InputDecoration(
@@ -255,7 +261,115 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             },
                           ),
                         ],
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+
+                        FormField<File>(
+                          validator: (value) {
+                            if (_selectedImage == null) {
+                              return 'Please select a profile photo';
+                            }
+                            return null;
+                          },
+                          builder: (state) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                GestureDetector(
+                                  onTap: () async {
+                                    final imageUrl = await pickAndUpload
+                                        .pickAndUploadImage(context);
+
+                                    if (imageUrl != null) {
+                                      setState(() {
+                                        _uploadedImageUrl = imageUrl;
+                                        _selectedImage = File('dummy');
+                                      });
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color:
+                                            state.hasError
+                                                ? Colors.red
+                                                : Colors.grey,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Center(
+                                      child:
+                                          _uploadedImageUrl != null
+                                              ? Container(
+                                                width: 150,
+                                                height: 150,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Colors.green,
+                                                    width: 3,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  child: Image.network(
+                                                    _uploadedImageUrl!,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              )
+                                              : DottedBorder(
+                                                borderType: BorderType.RRect,
+                                                radius: const Radius.circular(
+                                                  12,
+                                                ),
+                                                color: Colors.grey,
+                                                strokeWidth: 2,
+                                                dashPattern: const [6, 4],
+                                                child: Container(
+                                                  width: 150,
+                                                  height: 150,
+                                                  alignment: Alignment.center,
+                                                  child: Text(
+                                                    'Add Profile Photo',
+                                                    style: TextStyle(
+                                                      color:
+                                                          Theme.of(
+                                                            context,
+                                                          ).hintColor,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Label below the field
+                                Text(
+                                  _uploadedImageUrl != null
+                                      ? 'File uploaded successfully'
+                                      : 'Please select a profile photo',
+                                  style: TextStyle(
+                                    color:
+                                        state.hasError
+                                            ? Colors.red
+                                            : _uploadedImageUrl != null
+                                            ? Colors.green
+                                            : Theme.of(context).hintColor,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
                         if (authState.isLoading)
                           CircularProgressIndicator(
                             color: Theme.of(context).colorScheme.primary,
@@ -266,8 +380,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             child: ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
                               ),
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),

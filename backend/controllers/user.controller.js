@@ -62,6 +62,7 @@ const login = asyncHandler(async (req, res) => {
       role: user.role,
       businessName: user.businessName,
       businessDescription: user.businessDescription,
+      profileimage:user.profileimage
     },
   });
 });
@@ -76,6 +77,7 @@ const register = asyncHandler(async (req, res) => {
     role,
     businessName,
     businessDescription,
+    profileimage
   } = req.body;
 
   // Validate inputs
@@ -110,7 +112,7 @@ const register = asyncHandler(async (req, res) => {
 
   let user;
   if (role === "customer") {
-    if (!email || !password || !name || !phone) {
+    if (!email || !password || !name || !phone || !profileimage)  {
       return res.status(400).send({
         message: "Please provide all fields",
         success: false,
@@ -122,6 +124,7 @@ const register = asyncHandler(async (req, res) => {
       name,
       phone,
       role,
+      profileimage
     });
   } else {
     if (
@@ -130,7 +133,8 @@ const register = asyncHandler(async (req, res) => {
       !name ||
       !phone ||
       !businessName ||
-      !businessDescription
+      !businessDescription ||
+      !profileimage
     ) {
       return res.status(400).send({
         message: "Please provide all fields",
@@ -145,6 +149,7 @@ const register = asyncHandler(async (req, res) => {
       role,
       businessName,
       businessDescription,
+      profileimage
     });
   }
 
@@ -179,6 +184,7 @@ const register = asyncHandler(async (req, res) => {
       role: user.role,
       businessName: user.businessName,
       businessDescription: user.businessDescription,
+      profileimage: user.profileimage,
     },
   });
 });

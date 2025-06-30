@@ -8,6 +8,7 @@ class User {
   final String role;
   final String? businessName;
   final String? businessDescription;
+  final String? profileimage;
 
   User({
     required this.id,
@@ -17,6 +18,7 @@ class User {
     required this.role,
     this.businessName,
     this.businessDescription,
+    required this.profileimage
   });
 
   // Convert JSON to User object
@@ -27,6 +29,7 @@ class User {
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       role: json['role'] ?? '',
+      profileimage: json['profileimage'] ?? '',
       businessName: json['businessName'],
       businessDescription: json['businessDescription'],
     );
@@ -40,6 +43,7 @@ class User {
       'name': name,
       'phone': phone,
       'role': role,
+      'profileimage': profileimage,
       'businessName': businessName,
       'businessDescription': businessDescription,
     };

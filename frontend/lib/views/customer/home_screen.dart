@@ -44,6 +44,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+  
 
     return authState.when(
       data: (user) {
@@ -60,9 +61,11 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
           ChatScreen(userId:user.id),
         ];
 
+        debugPrint(' DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG DEBUG');
+         debugPrint( 'Profile image: ${user.profileimage}');
         return Scaffold(
           appBar: AppBar(title: const Text('Customer Dashboard')),
-          drawer: const AppDrawer(role: 'customer'),
+          drawer:  AppDrawer(role: user.role,image:user.profileimage ),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,

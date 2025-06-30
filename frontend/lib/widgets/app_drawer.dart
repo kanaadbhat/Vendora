@@ -6,14 +6,16 @@ import '../viewmodels/theme_viewmodel.dart';
 
 class AppDrawer extends ConsumerWidget {
   final String? role;
-  
-  const AppDrawer({super.key, this.role});
+  final String? image;
+
+  const AppDrawer({super.key, this.role, this.image});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final isCustomer = role == 'customer';
-    
+    debugPrint('Profile image URL: $image');
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -26,10 +28,14 @@ class AppDrawer extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const CircleAvatar(
+                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 35, color: Colors.grey),
+                  backgroundImage: image != null ? NetworkImage(image!) : null,
+                  child:
+                      image == null
+                          ? Icon(Icons.person, size: 35, color: Colors.grey)
+                          : null,
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -54,7 +60,7 @@ class AppDrawer extends ConsumerWidget {
               Navigator.pop(context);
             },
           ),
-          if (isCustomer) ...[  
+          if (isCustomer) ...[
             ListTile(
               leading: const Icon(Icons.explore),
               title: const Text('Explore Vendors'),
@@ -69,7 +75,8 @@ class AppDrawer extends ConsumerWidget {
                 Navigator.pop(context);
               },
             ),
-          ] else ...[  // Vendor specific items
+          ] else ...[
+            // Vendor specific items
             ListTile(
               leading: const Icon(Icons.inventory),
               title: const Text('Products'),
@@ -86,9 +93,7 @@ class AppDrawer extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: Icon(
-              isDarkMode ? Icons.light_mode : Icons.dark_mode,
-            ),
+            leading: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
             title: Text(isDarkMode ? 'Light Mode' : 'Dark Mode'),
             onTap: () {
               ref.read(themeProvider.notifier).toggleTheme();
@@ -103,20 +108,22 @@ class AppDrawer extends ConsumerWidget {
               debugPrint("[DEBUG] AppDrawer - Logout button pressed");
               await ref.read(authProvider.notifier).logout();
               debugPrint("[DEBUG] AppDrawer - Logout completed");
-              
+
               // Add a small delay to ensure state updates are processed
               await Future.delayed(const Duration(milliseconds: 300));
-              
+
               if (context.mounted) {
-                debugPrint("[DEBUG] AppDrawer - Context is mounted, navigating to LoginScreen");
+                debugPrint(
+                  "[DEBUG] AppDrawer - Context is mounted, navigating to LoginScreen",
+                );
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
                 );
               } else {
-                debugPrint("[DEBUG] AppDrawer - Context is not mounted, navigation skipped");
+                debugPrint(
+                  "[DEBUG] AppDrawer - Context is not mounted, navigation skipped",
+                );
               }
             },
           ),

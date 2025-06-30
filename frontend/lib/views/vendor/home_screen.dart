@@ -61,7 +61,7 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
 
         return Scaffold(
           appBar: AppBar(title: const Text('Vendor Dashboard')),
-          drawer: const AppDrawer(role: 'vendor'),
+          drawer:  AppDrawer(role: user.role, image:user.profileimage),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,
