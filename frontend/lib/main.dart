@@ -10,6 +10,7 @@ import 'viewmodels/role_viewmodel.dart';
 import 'viewmodels/theme_viewmodel.dart';
 import 'widgets/error_widget.dart';
 import 'widgets/loading_widget.dart';
+import '../../services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,7 @@ void main() async {
       await dotenv.load(fileName:'.env.local');
     }
   }
+  await AuthService().logout();
   runApp(const ProviderScope(child: MyApp()));
 }
 
