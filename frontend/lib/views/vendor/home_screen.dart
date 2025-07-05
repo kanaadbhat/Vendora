@@ -18,11 +18,24 @@ class VendorHomeScreen extends ConsumerStatefulWidget {
 
 class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   int _currentIndex = 0;
+  bool _productsFetched = false;
 
   @override
   void initState() {
     super.initState();
     // Remove the premature auth check - let the build method handle everything
+  }
+
+  void _fetchProductsIfNeeded() {
+    if (!_productsFetched) {
+      debugPrint(
+        "[DEBUG] VendorHomeScreen._fetchProductsIfNeeded() - Fetching products",
+      );
+      Future.microtask(() {
+        ref.read(productProvider.notifier).fetchProducts();
+      });
+      _productsFetched = true;
+    }
   }
 
   @override
@@ -52,6 +65,9 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
             ),
           );
         }
+
+        // Fetch products when user is available
+        _fetchProductsIfNeeded();
 
         debugPrint(
           "[DEBUG] VendorHomeScreen.build() - Building vendor dashboard for user: ${user.name}",

@@ -23,6 +23,10 @@ services:
     staticPublishPath: build/web
     envVars:
       - key: API_BASE_URL
-        value: https://vendora-backend.onrender.com/api
+        sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
         sync: false

@@ -188,82 +188,116 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
       },
     );
   }
-   Widget _buildProductCard(Product product, AsyncValue<bool> subscriptionStatus) {
-    return SizedBox(
-      width: 250,
-      height: 230,
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 4,
-        
-        clipBehavior: Clip.antiAlias,
+
+  Widget _buildProductCard(
+    Product product,
+    AsyncValue<bool> subscriptionStatus,
+  ) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      elevation: 6,
+      shadowColor: Colors.black.withOpacity(0.1),
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E), // Dart dark color
+        ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Image section
             AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Image.network(
-                product.image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.broken_image, size: 40),
-                ),
-                loadingBuilder: (_, child, progress) {
-                  if (progress == null) return child;
-                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              aspectRatio: 1.2,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(color: Colors.grey[100]),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
                   ),
-                  const SizedBox(height: 1),
-                  Text(
-                    product.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '₹${double.parse(product.price).toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      subscriptionStatus.when(
-                        data: (isSubscribed) => ElevatedButton(
-                          onPressed: isSubscribed ? null : () => _subscribeToProduct(product),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            textStyle: const TextStyle(fontSize: 10),
+                  child: Image.network(
+                    product.image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.broken_image,
+                            size: 32,
+                            color: Colors.grey,
                           ),
-                          child: Text(isSubscribed ? 'Subscribed' : 'Subscribe'),
                         ),
-                        loading: () => const SizedBox(
-                          height: 18,
-                          width: 18,
+                    loadingBuilder: (_, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        color: Colors.grey[100],
+                        child: const Center(
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        error: (err, _) => const Icon(Icons.error, size: 18, color: Colors.red),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ],
+                ),
+              ),
+            ),
+            // Content section
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Product name
+                    Text(
+                      product.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                        color: Color.fromARGB(210, 232, 232, 235),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Product description
+                    Expanded(
+                      child: Text(
+                        product.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[300],
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Price and subscribe button row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '₹${double.parse(product.price).toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        _buildSubscribeButton(subscriptionStatus, product),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -272,39 +306,94 @@ class _VendorProductsScreenState extends ConsumerState<VendorProductsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final crossAxis = width > 800 ? 4 : width > 600 ? 3 : width > 400 ? 2 : 1;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("${widget.vendorName}'s Products"),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _products.isEmpty
-              ? const Center(child: Text('No products available'))
-              : Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxis,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 0.7,
-                    ),
-                    itemCount: _products.length,
-                    itemBuilder: (context, index) {
-                      final product = _products[index];
-                      final subscriptionStatus = ref.watch(
-                        isProductSubscribedProvider(product.id),
-                      );
-                      return _buildProductCard(product, subscriptionStatus);
-                    },
-                  ),
+  Widget _buildSubscribeButton(
+    AsyncValue<bool> subscriptionStatus,
+    Product product,
+  ) {
+    return subscriptionStatus.when(
+      data:
+          (isSubscribed) => SizedBox(
+            height: 28,
+            child: ElevatedButton(
+              onPressed:
+                  isSubscribed ? null : () => _subscribeToProduct(product),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isSubscribed ? Colors.grey[400] : Colors.blue,
+                foregroundColor: isSubscribed ? Colors.grey[600] : Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                elevation: isSubscribed ? 0 : 2,
+              ),
+              child: Text(
+                isSubscribed ? 'Subscribed' : 'Subscribe',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+      loading:
+          () => const SizedBox(
+            height: 28,
+            width: 28,
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+      error:
+          (err, _) => const SizedBox(
+            height: 28,
+            width: 28,
+            child: Center(
+              child: Icon(Icons.error, size: 16, color: Colors.red),
+            ),
+          ),
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final crossAxis =
+        width > 1200
+            ? 5
+            : width > 900
+            ? 4
+            : width > 600
+            ? 3
+            : width > 400
+            ? 2
+            : 1;
+
+    return Scaffold(
+      appBar: AppBar(title: Text("${widget.vendorName}'s Products")),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _products.isEmpty
+              ? const Center(child: Text('No products available'))
+              : Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxis,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.75, // Portrait mode - taller than wide
+                  ),
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    final subscriptionStatus = ref.watch(
+                      isProductSubscribedProvider(product.id),
+                    );
+                    return _buildProductCard(product, subscriptionStatus);
+                  },
+                ),
+              ),
+    );
+  }
 }

@@ -6,7 +6,6 @@ import 'explore_vendors_screen.dart';
 import 'subscription_screen.dart';
 import 'chat_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../auth/login_screen.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
 import 'dashboard_screen.dart';
 
@@ -19,11 +18,23 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _currentIndex = 0;
+  bool _subscriptionsFetched = false;
 
   @override
   void initState() {
     super.initState();
-    // Remove the premature auth check - let the build method handle everything
+  }
+
+  void _fetchSubscriptionsIfNeeded() {
+    if (!_subscriptionsFetched) {
+      debugPrint(
+        "[DEBUG] CustomerHomeScreen._fetchSubscriptionsIfNeeded() - Fetching subscriptions",
+      );
+      Future.microtask(() {
+        ref.read(subscriptionProvider.notifier).fetchSubscriptions();
+      });
+      _subscriptionsFetched = true;
+    }
   }
 
   @override
@@ -57,6 +68,9 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
             ),
           );
         }
+
+        // Fetch subscriptions when user is available
+        _fetchSubscriptionsIfNeeded();
 
         final List<Widget> _screens = [
           const DashboardScreen(),
