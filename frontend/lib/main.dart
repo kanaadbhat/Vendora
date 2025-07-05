@@ -16,16 +16,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     if (!kReleaseMode) {
-      await dotenv.load(fileName:'.env.local');
+      await dotenv.load(fileName: '.env.local');
     }
   } else {
     if (kReleaseMode) {
-      await dotenv.load(fileName:'.env');
+      await dotenv.load(fileName: '.env');
     } else {
-      await dotenv.load(fileName:'.env.local');
+      await dotenv.load(fileName: '.env.local');
     }
   }
-  await AuthService().logout();
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -100,11 +99,29 @@ class MyApp extends ConsumerWidget {
 
           return roleState.when(
             data: (role) {
+              debugPrint("[UI] roleState.when -> role = $role");
+              debugPrint(
+                "[UI] roleState.when -> role type: ${role.runtimeType}",
+              );
+              debugPrint(
+                "[UI] roleState.when -> role == 'vendor': ${role == 'vendor'}",
+              );
+              debugPrint(
+                "[UI] roleState.when -> role == 'customer': ${role == 'customer'}",
+              );
+
               if (role == "customer") {
+                debugPrint(
+                  "[UI] roleState.when -> Returning CustomerHomeScreen",
+                );
                 return const CustomerHomeScreen();
               } else if (role == "vendor") {
+                debugPrint("[UI] roleState.when -> Returning VendorHomeScreen");
                 return const VendorHomeScreen();
               } else {
+                debugPrint(
+                  "[UI] roleState.when -> Returning AuthScreen (role is null or unknown)",
+                );
                 // Use the same theme for AuthScreen based on system brightness:
                 return Theme(
                   data:

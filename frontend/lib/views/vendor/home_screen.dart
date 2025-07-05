@@ -9,7 +9,6 @@ import 'chat_screen.dart';
 import 'dashboard_screen.dart';
 import '../../viewmodels/product_viewmodel.dart';
 
-
 class VendorHomeScreen extends ConsumerStatefulWidget {
   const VendorHomeScreen({super.key});
 
@@ -23,45 +22,49 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Check authentication state
-    Future.microtask(() {
-      final authState = ref.watch(authProvider);
-      authState.whenData((user) {
-        if (user == null) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-          return;
-        }
-        ref.read(productProvider.notifier).fetchProducts();
-       // ref.read(productWithSubscribersProvider.notifier).fetchDetails();
-      });
-    });
+    // Remove the premature auth check - let the build method handle everything
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    debugPrint("[DEBUG] VendorHomeScreen.build() - Auth state: $authState");
+
     return authState.when(
       data: (user) {
+        debugPrint(
+          "[DEBUG] VendorHomeScreen.build() - User: ${user?.name} (${user?.role})",
+        );
         if (user == null) {
+          debugPrint(
+            "[DEBUG] VendorHomeScreen.build() - User is null, showing loading",
+          );
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading user data...'),
+                ],
+              ),
+            ),
           );
         }
 
+        debugPrint(
+          "[DEBUG] VendorHomeScreen.build() - Building vendor dashboard for user: ${user.name}",
+        );
         final List<Widget> _screens = [
           const DashboardScreen(),
           const ProductListScreen(),
-          VendorChatScreen(
-          userId: user.id,
-        ),
+          VendorChatScreen(userId: user.id),
         ];
 
         return Scaffold(
           appBar: AppBar(title: const Text('Vendor Dashboard')),
-          drawer:  AppDrawer(role: user.role, image:user.profileimage),
+          drawer: AppDrawer(role: user.role, image: user.profileimage),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,
@@ -73,13 +76,42 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
           ),
         );
       },
-      loading:
-          () =>
-              const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error:
-          (_, __) =>
-              Scaffold(body: Center(child: Text('Error loading user data'))),
+      loading: () {
+        debugPrint("[DEBUG] VendorHomeScreen.build() - Auth state is loading");
+        return const Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Loading authentication...'),
+              ],
+            ),
+          ),
+        );
+      },
+      error: (_, __) {
+        debugPrint("[DEBUG] VendorHomeScreen.build() - Auth state has error");
+        return Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text('Error loading user data'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed:
+                      () => ref.read(authProvider.notifier).initializeUser(),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
-
 }
