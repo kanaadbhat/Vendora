@@ -70,40 +70,188 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
 
                 // Quick Stats
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Quick Stats',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                Consumer(
+                  builder: (context, ref, _) {
+                    final paymentsAsync = ref.watch(paymentsProvider);
+                    return paymentsAsync.when(
+                      data: (payments) {
+                        final totalPaid = payments.fold<double>(
+                          0,
+                          (sum, payment) =>
+                              sum +
+                              ((payment['amount'] ?? 0) is num
+                                  ? (payment['amount'] ?? 0).toDouble()
+                                  : 0.0),
+                        );
+                        final totalTransactions = payments.length;
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Quick Stats',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    _buildStatCard(
+                                      context,
+                                      'Total Subscriptions',
+                                      subscriptions.length.toString(),
+                                      Icons.subscriptions,
+                                    ),
+                                    _buildStatCard(
+                                      context,
+                                      'Total Paid',
+                                      '₹${totalPaid.toStringAsFixed(2)}',
+                                      Icons.payment,
+                                    ),
+                                    _buildStatCard(
+                                      context,
+                                      'Total Transactions',
+                                      totalTransactions.toString(),
+                                      Icons.swap_horiz,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildStatCard(
-                              context,
-                              'Total Subscriptions',
-                              subscriptions.length.toString(),
-                              Icons.subscriptions,
+                        );
+                      },
+                      loading:
+                          () => const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(child: CircularProgressIndicator()),
                             ),
-                            _buildStatCard(
-                              context,
-                              'Total Due',
-                              '\$${totalDue.toStringAsFixed(2)}',
-                              Icons.payment,
+                          ),
+                      error:
+                          (error, stack) => Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text('Error loading payments: $error'),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                          ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+                // Recent Payments
+                Consumer(
+                  builder: (context, ref, _) {
+                    final paymentsAsync = ref.watch(paymentsProvider);
+                    return paymentsAsync.when(
+                      data: (payments) {
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Recent Payments',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                if (payments.isEmpty)
+                                  const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                          SizedBox(height: 16),
+                                          Text(
+                                            'No payments yet',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount:
+                                        payments.length > 3
+                                            ? 3
+                                            : payments.length,
+                                    itemBuilder: (context, index) {
+                                      final payment = payments[index];
+                                      return Card(
+                                        margin: const EdgeInsets.only(
+                                          bottom: 8,
+                                        ),
+                                        child: ListTile(
+                                          leading: const Icon(
+                                            Icons.payment,
+                                            color: Colors.green,
+                                          ),
+                                          title: Text(
+                                            payment['description'] ?? 'Payment',
+                                          ),
+                                          subtitle: Text(
+                                            'To: ${payment['to']?['name'] ?? '-'}\nAmount: ₹${(payment['amount'] ?? 0).toStringAsFixed(2)}',
+                                          ),
+                                          trailing: Text(
+                                            payment['createdAt'] != null
+                                                ? payment['createdAt']
+                                                    .toString()
+                                                    .split('T')[0]
+                                                : '',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                      loading:
+                          () => const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                          ),
+                      error:
+                          (error, stack) => Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text('Error loading payments: $error'),
+                            ),
+                          ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -201,115 +349,6 @@ class DashboardScreen extends ConsumerWidget {
                               );
                             },
                           ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Quick Actions
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Payment',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Consumer(
-                          builder: (context, ref, _) {
-                            final razorpayService = ref.read(razorpayProvider);
-                            void handleSuccess(
-                              PaymentSuccessResponse response,
-                            ) async {
-                              final verified = await razorpayService.verifyPayment(
-                                orderId: response.orderId!,
-                                paymentId: response.paymentId!,
-                                signature: response.signature!,
-                                from: user?.id ?? '', // Customer ID
-                                to: '', // Empty string - will be handled by backend
-                                amount: 500, // Amount in paise
-                                currency: 'INR',
-                                receipt: 'order_rcptid_11',
-                                description: 'Vendora Subscription Payment',
-                              );
-                              // Use the current context safely
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      verified
-                                          ? "Payment Verified Successfully"
-                                          : "Payment Verification Failed",
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-
-                            void handleError(PaymentFailureResponse response) {
-                              // Use the current context safely
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Payment Failed: ${response.message}",
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-
-                            void handleExternalWallet(
-                              ExternalWalletResponse response,
-                            ) {
-                              // Use the current context safely
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "External Wallet: ${response.walletName}",
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-
-                            razorpayService.registerEventHandlers(
-                              onSuccess: handleSuccess,
-                              onError: handleError,
-                              onExternalWallet: handleExternalWallet,
-                            );
-                            return ElevatedButton(
-                              onPressed: () {
-                                razorpayService.createOrderAndPay(
-                                  amount: 5,
-                                  currency: "INR",
-                                  receipt: "order_rcptid_11",
-                                  name: user?.name ?? "Customer",
-                                  description: "Vendora Subscription Payment",
-                                  prefillContact: "9123456789",
-                                  prefillEmail:
-                                      user?.email ?? "test@example.com",
-                                  razorpayKey:
-                                      kIsWeb && kReleaseMode
-                                          ? const String.fromEnvironment(
-                                            'RAZORPAY_KEY_ID',
-                                            defaultValue: '',
-                                          )
-                                          : dotenv.env['RAZORPAY_KEY_ID'] ?? '',
-                                );
-                              },
-                              child: const Text("Pay ₹5"),
-                            );
-                          },
-                        ),
                       ],
                     ),
                   ),

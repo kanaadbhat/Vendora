@@ -96,6 +96,19 @@ class RazorpayService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchAllPayments() async {
+    try {
+      final response = await _apiService.get('/pay/all');
+      if (response.data['success'] == true && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('[RAZORPAY] Error fetching payments: $e');
+      return [];
+    }
+  }
+
   void clear() {
     _razorpay.clear();
   }

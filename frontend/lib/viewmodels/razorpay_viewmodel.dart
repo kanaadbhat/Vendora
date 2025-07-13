@@ -6,3 +6,10 @@ final razorpayProvider = Provider<RazorpayService>((ref) {
   ref.onDispose(() => service.clear());
   return service;
 });
+
+final paymentsProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final service = ref.read(razorpayProvider);
+  return await service.fetchAllPayments();
+});

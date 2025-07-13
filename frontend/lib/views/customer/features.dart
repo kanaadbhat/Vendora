@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/gradient_info_card.dart';
 import 'explore_vendors_screen.dart';
 import 'subscription_screen.dart';
+import 'payment.dart';
 
 class FeaturesScreen extends StatelessWidget {
   const FeaturesScreen({super.key});
@@ -38,6 +39,18 @@ class FeaturesScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (context) => const SubscriptionScreen(),
                 ),
+              );
+            },
+          ),
+          GradientInfoCard(
+            icon: Icons.payment,
+            title: 'Payments',
+            description: 'Pay your vendors directly from here.',
+            gradientColors: [Colors.green, Colors.teal],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PaymentScreen()),
               );
             },
           ),
