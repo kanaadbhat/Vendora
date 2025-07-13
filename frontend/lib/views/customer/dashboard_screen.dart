@@ -228,12 +228,17 @@ class DashboardScreen extends ConsumerWidget {
                             void handleSuccess(
                               PaymentSuccessResponse response,
                             ) async {
-                              final verified = await razorpayService
-                                  .verifyPayment(
-                                    orderId: response.orderId!,
-                                    paymentId: response.paymentId!,
-                                    signature: response.signature!,
-                                  );
+                              final verified = await razorpayService.verifyPayment(
+                                orderId: response.orderId!,
+                                paymentId: response.paymentId!,
+                                signature: response.signature!,
+                                from: user?.id ?? '', // Customer ID
+                                to: '', // Empty string - will be handled by backend
+                                amount: 500, // Amount in paise
+                                currency: 'INR',
+                                receipt: 'order_rcptid_11',
+                                description: 'Vendora Subscription Payment',
+                              );
                               // Use the current context safely
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -301,7 +306,7 @@ class DashboardScreen extends ConsumerWidget {
                                           : dotenv.env['RAZORPAY_KEY_ID'] ?? '',
                                 );
                               },
-                              child: const Text("Pay ₹500"),
+                              child: const Text("Pay ₹5"),
                             );
                           },
                         ),

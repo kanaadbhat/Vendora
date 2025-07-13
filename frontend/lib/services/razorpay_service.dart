@@ -4,10 +4,12 @@ import 'api_service.dart';
 
 class RazorpayService {
   late Razorpay _razorpay;
+  late ApiService _apiService;
 
   RazorpayService() {
     debugPrint('[RAZORPAY] Initializing Razorpay instance');
     _razorpay = Razorpay();
+    _apiService = ApiService();
   }
 
   void registerEventHandlers({
@@ -33,8 +35,7 @@ class RazorpayService {
   }) async {
     debugPrint('[RAZORPAY] Creating order via backend');
     // 1. Call backend to create order
-    final api = ApiService();
-    final response = await api.post(
+    final response = await _apiService.post(
       '/pay/create-order',
       data: {"amount": amount, "currency": currency, "receipt": receipt},
     );
@@ -63,17 +64,36 @@ class RazorpayService {
     required String orderId,
     required String paymentId,
     required String signature,
+    required String from, // Customer ID
+    required String to, // Vendor ID
+    required int amount,
+    required String currency,
+    required String receipt,
+    required String description,
   }) async {
-    final api = ApiService();
-    final response = await api.post(
-      '/pay/verify-payment',
-      data: {
-        "razorpay_order_id": orderId,
-        "razorpay_payment_id": paymentId,
-        "razorpay_signature": signature,
-      },
-    );
-    return response.data['success'] == true;
+    try {
+      debugPrint('[RAZORPAY] Verifying payment with backend');
+      final response = await _apiService.post(
+        '/pay/verify-payment',
+        data: {
+          'razorpay_order_id': orderId,
+          'razorpay_payment_id': paymentId,
+          'razorpay_signature': signature,
+          'from': from,
+          'to': to,
+          'amount': amount,
+          'currency': currency,
+          'receipt': receipt,
+          'description': description,
+        },
+      );
+
+      debugPrint('[RAZORPAY] Payment verification response: ${response.data}');
+      return response.data['success'] ?? false;
+    } catch (e) {
+      debugPrint('[RAZORPAY] Payment verification error: $e');
+      return false;
+    }
   }
 
   void clear() {
