@@ -48,6 +48,7 @@ dependencies:
   http_parser: ^4.0.2
   file_picker: ^10.2.0
   dotted_border: ^2.1.0
+  razorpay_web: ^3.0.0
 
 dev_dependencies:
   flutter_test:
