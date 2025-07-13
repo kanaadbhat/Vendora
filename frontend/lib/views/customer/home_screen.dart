@@ -20,6 +20,9 @@ class CustomerHomeScreen extends ConsumerStatefulWidget {
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _currentIndex = 0;
   bool _subscriptionsFetched = false;
+  final ValueNotifier<String?> _featureKeyNotifier = ValueNotifier<String?>(
+    null,
+  );
 
   @override
   void initState() {
@@ -75,14 +78,28 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
         final List<Widget> _screens = [
           const DashboardScreen(),
-          const FeaturesScreen(),
+          FeaturesScreen(featureKeyNotifier: _featureKeyNotifier),
           ChatScreen(userId: user.id),
         ];
 
-        debugPrint('Profile image: ${user.profileimage}');
+        debugPrint('Profile image:  [38;5;2m${user.profileimage} [0m');
         return Scaffold(
           appBar: AppBar(title: const Text('Customer Dashboard')),
-          drawer: AppDrawer(role: user.role, image: user.profileimage),
+          drawer: AppDrawer(
+            role: user.role,
+            image: user.profileimage,
+            setTab: (int idx) {
+              setState(() {
+                _currentIndex = idx;
+              });
+            },
+            onFeature: (String featureKey) {
+              _featureKeyNotifier.value = featureKey;
+              setState(() {
+                _currentIndex = 1; // Features tab
+              });
+            },
+          ),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,

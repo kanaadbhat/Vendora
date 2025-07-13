@@ -7,8 +7,16 @@ import '../viewmodels/theme_viewmodel.dart';
 class AppDrawer extends ConsumerWidget {
   final String? role;
   final String? image;
+  final void Function(int)? setTab;
+  final void Function(String featureKey)? onFeature;
 
-  const AppDrawer({super.key, this.role, this.image});
+  const AppDrawer({
+    super.key,
+    this.role,
+    this.image,
+    this.setTab,
+    this.onFeature,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,7 +36,7 @@ class AppDrawer extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                 CircleAvatar(
+                CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
                   backgroundImage: image != null ? NetworkImage(image!) : null,
@@ -53,18 +61,22 @@ class AppDrawer extends ConsumerWidget {
               ],
             ),
           ),
+          // Navigation items
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Home'),
             onTap: () {
+              setTab?.call(0);
               Navigator.pop(context);
             },
           ),
           if (isCustomer) ...[
             ListTile(
-              leading: const Icon(Icons.explore),
+              leading: const Icon(Icons.store),
               title: const Text('Explore Vendors'),
               onTap: () {
+                setTab?.call(1);
+                onFeature?.call('explore');
                 Navigator.pop(context);
               },
             ),
@@ -72,15 +84,43 @@ class AppDrawer extends ConsumerWidget {
               leading: const Icon(Icons.subscriptions),
               title: const Text('My Subscriptions'),
               onTap: () {
+                setTab?.call(1);
+                onFeature?.call('subscriptions');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.payment),
+              title: const Text('Payments'),
+              onTap: () {
+                setTab?.call(1);
+                onFeature?.call('payments');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                setTab?.call(2);
                 Navigator.pop(context);
               },
             ),
           ] else ...[
-            // Vendor specific items
             ListTile(
               leading: const Icon(Icons.inventory),
-              title: const Text('Products'),
+              title: const Text('My Products'),
               onTap: () {
+                setTab?.call(1);
+                onFeature?.call('products');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat),
+              title: const Text('Chat'),
+              onTap: () {
+                setTab?.call(2);
                 Navigator.pop(context);
               },
             ),

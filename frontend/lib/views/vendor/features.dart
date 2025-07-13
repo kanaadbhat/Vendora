@@ -2,8 +2,41 @@ import 'package:flutter/material.dart';
 import '../../widgets/gradient_info_card.dart';
 import 'product_list_screen.dart';
 
-class VendorFeaturesScreen extends StatelessWidget {
-  const VendorFeaturesScreen({super.key});
+class VendorFeaturesScreen extends StatefulWidget {
+  final ValueNotifier<String?>? featureKeyNotifier;
+  const VendorFeaturesScreen({super.key, this.featureKeyNotifier});
+
+  @override
+  State<VendorFeaturesScreen> createState() => _VendorFeaturesScreenState();
+}
+
+class _VendorFeaturesScreenState extends State<VendorFeaturesScreen> {
+  @override
+  void initState() {
+    super.initState();
+    widget.featureKeyNotifier?.addListener(_handleFeatureKey);
+  }
+
+  @override
+  void dispose() {
+    widget.featureKeyNotifier?.removeListener(_handleFeatureKey);
+    super.dispose();
+  }
+
+  void _handleFeatureKey() {
+    final key = widget.featureKeyNotifier?.value;
+    if (key == null) return;
+    if (!mounted) return;
+    switch (key) {
+      case 'products':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ProductListScreen()),
+        );
+        break;
+    }
+    widget.featureKeyNotifier?.value = null;
+  }
 
   @override
   Widget build(BuildContext context) {

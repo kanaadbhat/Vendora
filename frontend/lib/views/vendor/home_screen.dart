@@ -20,6 +20,9 @@ class VendorHomeScreen extends ConsumerStatefulWidget {
 class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
   int _currentIndex = 0;
   bool _productsFetched = false;
+  final ValueNotifier<String?> _featureKeyNotifier = ValueNotifier<String?>(
+    null,
+  );
 
   @override
   void initState() {
@@ -75,14 +78,24 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
         );
         final List<Widget> _screens = [
           const DashboardScreen(),
-          const VendorFeaturesScreen(),
-          const ProductListScreen(),
+          VendorFeaturesScreen(featureKeyNotifier: _featureKeyNotifier),
           VendorChatScreen(userId: user.id),
         ];
 
         return Scaffold(
           appBar: AppBar(title: const Text('Vendor Dashboard')),
-          drawer: AppDrawer(role: user.role, image: user.profileimage),
+          drawer: AppDrawer(
+            role: user.role,
+            image: user.profileimage,
+            setTab: (int idx) {
+              setState(() {
+                _currentIndex = idx;
+              });
+            },
+            onFeature: (String featureKey) {
+              _featureKeyNotifier.value = featureKey;
+            },
+          ),
           body: _screens[_currentIndex],
           bottomNavigationBar: BottomNavBar(
             currentIndex: _currentIndex,

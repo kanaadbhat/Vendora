@@ -20,170 +20,176 @@ class DashboardScreen extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome section with gradient background
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primary,
-                  Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome section with gradient background
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              borderRadius: BorderRadius.circular(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome, ${user?.name ?? "Vendor"}',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Manage your products and monitor your business',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome, ${user?.name ?? "Vendor"}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Manage your products and monitor your business',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          paymentsAsync.when(
-            data: (payments) {
-              final totalEarnings = payments.fold<double>(
-                0,
-                (sum, payment) =>
-                    sum +
-                    ((payment['amount'] ?? 0) is num
-                        ? (payment['amount'] ?? 0).toDouble()
-                        : 0.0),
-              );
-              final totalTransactions = payments.length;
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Quick Stats',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatCard(
-                            context,
-                            'Total Products',
-                            productCount.toString(),
-                            Icons.inventory,
-                          ),
-                          _buildStatCard(
-                            context,
-                            'Total Earnings',
-                            '₹${totalEarnings.toStringAsFixed(2)}',
-                            Icons.attach_money,
-                          ),
-                          _buildStatCard(
-                            context,
-                            'Total Transactions',
-                            totalTransactions.toString(),
-                            Icons.swap_horiz,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-            loading:
-                () => const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-            error:
-                (error, stack) => Card(
+            const SizedBox(height: 24),
+            paymentsAsync.when(
+              data: (payments) {
+                final totalEarnings = payments.fold<double>(
+                  0,
+                  (sum, payment) =>
+                      sum +
+                      ((payment['amount'] ?? 0) is num
+                          ? (payment['amount'] ?? 0).toDouble()
+                          : 0.0),
+                );
+                final totalTransactions = payments.length;
+                return Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text('Error loading payments: $error'),
-                  ),
-                ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Recent Payments',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          paymentsAsync.when(
-            data: (payments) {
-              if (payments.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, size: 48, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text(
-                          'No payments yet',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        const Text(
+                          'Quick Stats',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildStatCard(
+                              context,
+                              'Total Products',
+                              productCount.toString(),
+                              Icons.inventory,
+                            ),
+                            _buildStatCard(
+                              context,
+                              'Total Earnings',
+                              '₹${totalEarnings.toStringAsFixed(2)}',
+                              Icons.attach_money,
+                            ),
+                            _buildStatCard(
+                              context,
+                              'Total Transactions',
+                              totalTransactions.toString(),
+                              Icons.swap_horiz,
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 );
-              }
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: payments.length > 3 ? 3 : payments.length,
-                itemBuilder: (context, index) {
-                  final payment = payments[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: const Icon(Icons.payment, color: Colors.green),
-                      title: Text(payment['description'] ?? 'Payment'),
-                      subtitle: Text(
-                        'From: ${payment['from']?['name'] ?? '-'}\nAmount: ₹${(payment['amount'] ?? 0).toStringAsFixed(2)}',
-                      ),
-                      trailing: Text(
-                        payment['createdAt'] != null
-                            ? payment['createdAt'].toString().split('T')[0]
-                            : '',
+              },
+              loading:
+                  () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+              error:
+                  (error, stack) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text('Error loading payments: $error'),
+                    ),
+                  ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Recent Payments',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            paymentsAsync.when(
+              data: (payments) {
+                if (payments.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 48,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No payments yet',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
                       ),
                     ),
                   );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error:
-                (error, stack) =>
-                    Center(child: Text('Error loading payments: $error')),
-          ),
-        ],
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: payments.length > 3 ? 3 : payments.length,
+                  itemBuilder: (context, index) {
+                    final payment = payments[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.payment, color: Colors.green),
+                        title: Text(payment['description'] ?? 'Payment'),
+                        subtitle: Text(
+                          'From: ${payment['from']?['name'] ?? '-'}\nAmount: ₹${(payment['amount'] ?? 0).toStringAsFixed(2)}',
+                        ),
+                        trailing: Text(
+                          payment['createdAt'] != null
+                              ? payment['createdAt'].toString().split('T')[0]
+                              : '',
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error:
+                  (error, stack) =>
+                      Center(child: Text('Error loading payments: $error')),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -133,6 +133,9 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                           receipt: 'order_rcptid_11',
                           description: 'Vendora Payment to $selectedVendorName',
                         );
+                        // Refresh paymentsProvider so dashboard and others update automatically
+                        // ignore: unused_result
+                        ref.refresh(paymentsProvider);
                         if (mounted) {
                           _showSingleSnackBar(
                             context,
