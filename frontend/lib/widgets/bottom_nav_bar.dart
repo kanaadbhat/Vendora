@@ -19,23 +19,16 @@ class BottomNavBar extends StatelessWidget {
             ? const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.inventory),
-                label: 'Products',
+                icon: Icon(Icons.star),
+                label: 'Features',
               ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat),
-                label: 'Chat',
-              ),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
             ]
             : const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
               BottomNavigationBarItem(
-                icon: Icon(Icons.store),
-                label: 'Explore',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.subscriptions),
-                label: 'Subscriptions',
+                icon: Icon(Icons.star),
+                label: 'Features',
               ),
               BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
             ];

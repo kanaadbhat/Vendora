@@ -7,6 +7,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../auth/login_screen.dart';
 import 'chat_screen.dart';
 import 'dashboard_screen.dart';
+import 'features.dart';
 import '../../viewmodels/product_viewmodel.dart';
 
 class VendorHomeScreen extends ConsumerStatefulWidget {
@@ -74,6 +75,7 @@ class _VendorHomeScreenState extends ConsumerState<VendorHomeScreen> {
         );
         final List<Widget> _screens = [
           const DashboardScreen(),
+          const VendorFeaturesScreen(),
           const ProductListScreen(),
           VendorChatScreen(userId: user.id),
         ];

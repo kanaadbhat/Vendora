@@ -8,6 +8,7 @@ import 'chat_screen.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/subscription_viewmodel.dart';
 import 'dashboard_screen.dart';
+import 'features.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -74,8 +75,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
         final List<Widget> _screens = [
           const DashboardScreen(),
-          const ExploreVendorsScreen(),
-          const SubscriptionScreen(),
+          const FeaturesScreen(),
           ChatScreen(userId: user.id),
         ];
 
