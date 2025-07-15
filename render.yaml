@@ -15,7 +15,11 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
-
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_SECRET
+        sync: false
+      
   - name: vendora-frontend
     type: web
     runtime: static
@@ -29,4 +33,6 @@ services:
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: RAZORPAY_KEY_ID
         sync: false

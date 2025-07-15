@@ -12,10 +12,14 @@ class UserPromptBuilder {
     required List<Subscription> subscriptions,
     required List<SubscriptionDelivery> subscriptionDeliveries,
   }) {
-    debugPrint('[DEBUG] PromptBuilder.buildPrompt() - Building prompt for user: $userId');
+    debugPrint(
+      '[DEBUG] PromptBuilder.buildPrompt() - Building prompt for user: $userId',
+    );
     debugPrint('[DEBUG] PromptBuilder.buildPrompt() - Message: $message');
-    debugPrint('[DEBUG] PromptBuilder.buildPrompt() - Subscriptions count: ${subscriptions.length}');
-    
+    debugPrint(
+      '[DEBUG] PromptBuilder.buildPrompt() - Subscriptions count: ${subscriptions.length}',
+    );
+
     // Format subscriptions list with IDs
     final subList = subscriptions
         .map(
@@ -71,9 +75,12 @@ $logs''';
         })
         .join('\n');
 
-    debugPrint('[DEBUG] PromptBuilder.buildPrompt() - Formatted subscription list and delivery info');
+    debugPrint(
+      '[DEBUG] PromptBuilder.buildPrompt() - Formatted subscription list and delivery info',
+    );
 
-    final promptText = '''You are a Multilingual AI assistant for Vendora Delivery Management app. You have FULL ACCESS to the user's subscription and delivery data and should respond accordingly.
+    final promptText =
+        '''You are a Multilingual AI assistant for Vendora Delivery Management app. You have FULL ACCESS to the user's subscription and delivery data and should respond accordingly.
     Using this chatbot users can see their subscription status and associated data, and change delivery details of their subscriptions.
 
 Current Subscriptions:
@@ -131,7 +138,9 @@ Available API Endpoints:
 
 User Message: "$message"''';
 
-    debugPrint('[DEBUG] PromptBuilder.buildPrompt() - Prompt built successfully');
+    debugPrint(
+      '[DEBUG] PromptBuilder.buildPrompt() - Prompt built successfully',
+    );
     return promptText;
   }
 }
