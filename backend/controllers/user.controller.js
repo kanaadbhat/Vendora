@@ -323,6 +323,15 @@ const userDetails = asyncHandler(async (req, res) => {
   });
 });
 
+//HEALTH CHECK
+const healthCheck = asyncHandler(async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Server is active and running",
+    timestamp: new Date().toISOString()
+  });
+});
+
 export { 
   login, 
   register, 
@@ -330,5 +339,6 @@ export {
   signOut, 
   deleteProfile,
   userDetails,
-  refreshToken 
+  refreshToken,
+  healthCheck 
 };

@@ -1,18 +1,17 @@
 import { Router } from 'express';
-import { 
-  login, 
-  register, 
-  exploreUsers, 
-  signOut, 
+import {
+  login,
+  register,
+  exploreUsers,
+  signOut,
   deleteProfile,
   userDetails,
-  refreshToken 
+  refreshToken,
+  healthCheck
 } from '../controllers/user.controller.js';
 import protect from "../middleware/auth.middleware.js";
 import { isCustomer, isVendor } from "../middleware/role.middleware.js";
 import { rateLimit } from 'express-rate-limit';
-
-
 const router = Router();
 const limiter = rateLimit({
   windowMs:  60 * 1000, 
@@ -25,6 +24,7 @@ router.route('/login').post(login);
 router.route('/register').post(limiter,register);
 router.route('/logout').post(signOut);
 router.route('/refresh-token').post(refreshToken);
+router.route('/health').get(healthCheck);
 
 // Protected routes with role-based access
 router.route('/details').get(protect, userDetails); // Both customers and vendors can access their own details

@@ -8,9 +8,10 @@ import 'views/customer/home_screen.dart';
 import 'views/vendor/home_screen.dart';
 import 'viewmodels/role_viewmodel.dart';
 import 'viewmodels/theme_viewmodel.dart';
+import 'viewmodels/server_availability_viewmodel.dart';
 import 'widgets/error_widget.dart';
 import 'widgets/loading_widget.dart';
-import '../../services/auth_service.dart';
+import 'widgets/server_loading_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final roleState = ref.watch(roleProvider);
     final themeMode = ref.watch(themeProvider);
+    final serverState = ref.watch(serverAvailabilityProvider);
 
     // Define your theme data once and reuse:
     final lightThemeData = ThemeData(
@@ -95,6 +97,28 @@ class MyApp extends ConsumerWidget {
       themeMode: themeMode,
       home: Builder(
         builder: (context) {
+          // Check server availability first before showing any UI
+          if (!serverState.isAvailable && !serverState.hasError) {
+            // Start checking server availability if not already checking
+            if (!serverState.isChecking) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                ref.read(serverAvailabilityProvider.notifier).checkServerAvailability();
+              });
+            }
+            
+            return const ServerLoadingScreen(
+              message: "Connecting to server, please wait...",
+            );
+          }
+          
+          // If server check failed, show error with retry option
+          if (serverState.hasError && !serverState.isAvailable) {
+            return CustomErrorWidget(
+              message: "Unable to connect to server. Please check your internet connection and try again.",
+              onRetry: () => ref.read(serverAvailabilityProvider.notifier).checkServerAvailability(),
+            );
+          }
+
           final brightness = MediaQuery.of(context).platformBrightness;
 
           return roleState.when(

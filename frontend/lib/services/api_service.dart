@@ -88,6 +88,19 @@ class ApiService {
     }
   }
 
+  Future<bool> checkServerHealth() async {
+    try {
+      debugPrint("[DEBUG] ApiService.checkServerHealth() - Checking server health");
+      final response = await _dio.get('/user/health');
+      final isHealthy = response.statusCode == 200;
+      debugPrint("[DEBUG] ApiService.checkServerHealth() - Server health: $isHealthy");
+      return isHealthy;
+    } catch (e) {
+      debugPrint("[DEBUG] ApiService.checkServerHealth() - Server health check failed: $e");
+      return false;
+    }
+  }
+
   Future<void> _updateToken(String? token) async {
     if (token != null) {
       await _authService.saveToken(token);
